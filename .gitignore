@@ -1,0 +1,9 @@
+# Passwort-Hash und Sicherungen gehören nicht ins Repository
+data/config.php
+data/backups/
+*.tmp-*
+
+# Lokal
+.idea/
+.claude-account
+entwuerfe/

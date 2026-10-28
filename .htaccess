@@ -1,0 +1,9 @@
+# data.js ändert sich beim Speichern im Backend – Browser sollen jedes Mal nachfragen
+<Files "data.js">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</Files>
+
+# Versteckte Dateien (.git, .ddev, .idea …) nicht ausliefern
+RedirectMatch 404 /\.(?!well-known)
