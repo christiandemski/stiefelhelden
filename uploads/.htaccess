@@ -1,0 +1,4 @@
+# Hier liegen nur hochgeladene Fotos: nichts anderes ausliefern, nie Skripte ausführen
+<FilesMatch "^(?!.*\.jpe?g$)">
+  Require all denied
+</FilesMatch>

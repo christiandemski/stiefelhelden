@@ -43,6 +43,17 @@
 .icon-btn:hover { color: var(--ink); border-color: var(--muted); }
 .icon-btn.danger:hover { color: #fff; background: #d63a3a; border-color: #d63a3a; }
 
+/* Kompakte Tabelle (Bestzeiten): Kopfzeile einmal, Zeilen dicht */
+.compact-table { --bs-table-bg: transparent; --bs-table-color: var(--ink); --bs-table-border-color: var(--line); min-width: 560px; }
+.compact-table th { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: .35rem .3rem; border-bottom-width: 1px; }
+.compact-table td { padding: .3rem; border-bottom: 0; }
+.compact-table .w-dist { width: 22%; }
+.compact-table .w-time { width: 16%; }
+.compact-table .w-year { width: 13%; }
+.compact-table .w-tools { width: 118px; }
+.compact-table .row-tools { padding-top: 0; justify-content: flex-end; }
+.compact-table .icon-btn { width: 30px; height: 30px; font-size: .85rem; }
+
 /* Rennen zum Aufklappen */
 .race-edit { border: 1px solid var(--line); border-radius: 1rem; padding: .85rem 1.1rem; margin-bottom: .6rem; background: var(--surface); }
 .race-edit[open] { background: var(--surface-2); }
@@ -53,6 +64,19 @@
 .sum-date { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; min-width: 6.5rem; }
 .sum-name { font-weight: 700; flex: 1; }
 .sum-km { color: var(--muted); font-size: .9rem; }
+
+/* Fotos je Rennen */
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .75rem; }
+.photo-item { margin: 0; display: flex; flex-direction: column; gap: .4rem; }
+.photo-item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: .75rem; background: var(--line); }
+.photo-tools { display: flex; gap: 4px; justify-content: center; }
+.photo-add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
+  aspect-ratio: 4 / 3; border: 2px dashed var(--line); border-radius: .75rem; cursor: pointer;
+  color: var(--muted); font-weight: 700; transition: border-color .2s, color .2s;
+}
+.photo-add:hover, .photo-add:focus-within { border-color: var(--green); color: var(--ink); }
+.photo-add small { font-weight: 400; font-size: .75rem; }
 
 .backup-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid var(--line); }
 .backup-list li:last-child { border-bottom: 0; }

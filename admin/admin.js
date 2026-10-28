@@ -42,6 +42,33 @@
     </div>`;
   const empty = (txt) => `<p class="text-body-secondary m-0">${esc(txt)}</p>`;
 
+  // Kompakte Tabellenzelle: Beschriftung steht einmal im Tabellenkopf, hier nur für Screenreader
+  const cell = (label, path, o = {}) => {
+    const { type = "text", placeholder = "", kind = "" } = o;
+    return `<td><input class="form-control form-control-sm" type="${type}" data-bind="${path}" ${kind ? `data-kind="${kind}"` : ""}
+      ${type === "number" ? 'step="any" inputmode="numeric"' : ""} value="${esc(getAt(path))}" placeholder="${esc(placeholder)}" aria-label="${esc(label)}"></td>`;
+  };
+
+  const photosHTML = (i) => {
+    const fotos = S.rennen[i].fotos || [];
+    return `<span class="form-label d-block">Fotos</span>
+      <div class="photo-grid">
+        ${fotos.map((f, j) => `<figure class="photo-item">
+          <img src="../uploads/rennen/thumb/${esc(f.datei)}" alt="" loading="lazy">
+          <input class="form-control form-control-sm" data-bind="rennen.${i}.fotos.${j}.text" value="${esc(f.text)}" placeholder="Bildtext (optional)" aria-label="Bildtext Foto ${j + 1}">
+          <div class="photo-tools">
+            <button type="button" class="icon-btn" data-act="up" data-path="rennen.${i}.fotos.${j}" aria-label="Nach vorn">←</button>
+            <button type="button" class="icon-btn" data-act="down" data-path="rennen.${i}.fotos.${j}" aria-label="Nach hinten">→</button>
+            <button type="button" class="icon-btn danger" data-act="del" data-path="rennen.${i}.fotos.${j}" aria-label="Foto löschen">✕</button>
+          </div>
+        </figure>`).join("")}
+        <label class="photo-add">
+          <input type="file" accept="image/*" multiple data-upload="${i}" class="visually-hidden">
+          <span>+ Fotos</span><small>JPG, PNG, WebP</small>
+        </label>
+      </div>`;
+  };
+
   // ---------- Bereiche ----------
   const views = {
     allgemein: () =>
@@ -73,15 +100,19 @@
           <h3>${esc(S.laeufer[id])}</h3>
           <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" data-act="add-pb" data-id="${id}">+ Bestzeit</button>
         </div>
-        ${rows.length ? rows.map((_, i) => `<div class="edit-row">
-          <div class="row g-2 flex-grow-1">
-            ${input("Distanz", `bestzeiten.${id}.${i}.distanz`, { cls: "col-6 col-md-3", placeholder: "10 km" })}
-            ${input("Zeit", `bestzeiten.${id}.${i}.zeit`, { cls: "col-6 col-md-2", placeholder: "52:07" })}
-            ${input("Rennen", `bestzeiten.${id}.${i}.rennen`, { cls: "col-8 col-md-5" })}
-            ${input("Jahr", `bestzeiten.${id}.${i}.jahr`, { type: "number", cls: "col-4 col-md-2", kind: "int" })}
-          </div>
-          ${tools(`bestzeiten.${id}.${i}`)}
-        </div>`).join("") : empty("Noch keine Bestzeiten.")}
+        ${rows.length ? `<div class="table-responsive"><table class="table compact-table align-middle m-0">
+          <thead><tr><th class="w-dist">Distanz</th><th class="w-time">Zeit</th><th>Rennen</th><th class="w-year">Jahr</th><th class="w-tools"><span class="visually-hidden">Aktionen</span></th></tr></thead>
+          <tbody>${rows.map((_, i) => {
+            const p = `bestzeiten.${id}.${i}`, n = `${S.laeufer[id]}, Zeile ${i + 1}`;
+            return `<tr>
+              ${cell(`Distanz (${n})`, `${p}.distanz`, { placeholder: "10 km" })}
+              ${cell(`Zeit (${n})`, `${p}.zeit`, { placeholder: "52:07" })}
+              ${cell(`Rennen (${n})`, `${p}.rennen`)}
+              ${cell(`Jahr (${n})`, `${p}.jahr`, { type: "number", kind: "int" })}
+              <td>${tools(p)}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table></div>` : empty("Noch keine Bestzeiten.")}
       </div>`;
     }).join(""),
 
@@ -101,6 +132,7 @@
             ${input("Startnummer", `rennen.${i}.startnummer`, { type: "number", cls: "col-6 col-md-4", kind: "int" })}
             ${ids.map((id) => input(`Zeit ${S.laeufer[id]}`, `rennen.${i}.zeiten.${id}`, { cls: "col-6 col-md-4", placeholder: "leer = nicht gelaufen" })).join("")}
             ${textarea("Notiz (ein Satz, optional)", `rennen.${i}.notiz`)}
+            <div class="col-12">${photosHTML(i)}</div>
             <div class="col-12 text-end"><button type="button" class="btn btn-outline-danger btn-sm rounded-pill" data-act="del" data-path="rennen.${i}">Rennen löschen</button></div>
           </div>
         </details>`;
@@ -170,6 +202,11 @@
 
   editor.addEventListener("change", (e) => {
     const el = e.target;
+    if (el.dataset.upload !== undefined) {
+      upload(Number(el.dataset.upload), [...el.files]);
+      el.value = "";
+      return;
+    }
     if (el.dataset.wer) {
       S.naechsterStart.wer = ids.filter((id) => $(`#wer-${id}`).checked);
       setDirty(true);
@@ -267,6 +304,48 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
   });
   addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+  // ---------- Fotos hochladen ----------
+  // Im Browser verkleinern: kleine Uploads, Hochkant-Fotos richtig gedreht, Handy-Formate (HEIC in Safari) gehen auch.
+  const shrink = async (file) => {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const s = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * s);
+    c.height = Math.round(bmp.height * s);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
+    return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error())), "image/jpeg", 0.88));
+  };
+
+  const upload = async (i, files) => {
+    const race = S.rennen[i];
+    race.fotos ||= [];
+    const problems = [];
+    for (const [n, file] of files.entries()) {
+      status.textContent = `Lade Foto ${n + 1} von ${files.length} hoch …`;
+      let blob;
+      try { blob = await shrink(file); } catch (err) {
+        problems.push(`${file.name}: Format wird vom Browser nicht unterstützt (bitte als JPG exportieren).`);
+        continue;
+      }
+      const fd = new FormData();
+      fd.append("foto", blob, "foto.jpg");
+      try {
+        const res = await fetch("api.php?action=upload", { method: "POST", headers: { "X-CSRF-Token": CSRF }, body: fd, credentials: "same-origin" });
+        const data = await res.json().catch(() => ({ error: "Unerwartete Antwort vom Server." }));
+        if (!res.ok) { problems.push(`${file.name}: ${data.error}`); continue; }
+        race.fotos.push({ datei: data.datei, text: "", w: data.w, h: data.h });
+      } catch (err) {
+        problems.push(`${file.name}: keine Verbindung zum Server.`);
+      }
+    }
+    open.add(race);
+    render("rennen");
+    setDirty(true);
+    status.textContent = "Fotos hochgeladen – jetzt speichern";
+    if (problems.length) alertBox("warning", `<strong>Nicht alle Fotos hat es geklappt:</strong><ul class="mb-0 mt-2">${problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`);
+  };
 
   // ---------- Sicherungen ----------
   const loadBackups = async () => {

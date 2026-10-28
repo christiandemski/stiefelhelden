@@ -11,3 +11,10 @@ entwuerfe/
 # Inhalte werden auf dem Server im Backend gepflegt; ins Repo kommt nur die Vorlage
 data/stiefel.json
 data.js
+
+# Hochgeladene Fotos (nur die Schutzregel gehört ins Repo)
+uploads/*
+!uploads/.htaccess
+
+# Persönliche Lauflisten zum Einlesen – nie ins öffentliche Repo
+import/

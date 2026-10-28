@@ -12,6 +12,11 @@ const JS_FILE     = ROOT . '/data.js';
 const CONFIG_FILE = ROOT . '/data/config.php';
 const BACKUP_DIR  = ROOT . '/data/backups';
 const BACKUP_KEEP = 30;
+const FOTO_DIR    = ROOT . '/uploads/rennen';
+const THUMB_DIR   = FOTO_DIR . '/thumb';
+const FOTO_MAX    = 2000;  // längste Kante in px
+const THUMB_MAX   = 640;
+const FOTOS_PER_RACE = 40;
 
 final class ValidationError extends RuntimeException
 {
@@ -162,6 +167,81 @@ function list_backups(): array
     return $out;
 }
 
+// ---------------------------------------------------------------- Fotos
+
+/**
+ * Speichert ein hochgeladenes Bild neu als JPEG (groß + Vorschau).
+ * Durch das Neu-Kodieren fallen Metadaten wie GPS-Koordinaten weg.
+ * @return array{datei: string, w: int, h: int}
+ */
+function store_photo(string $tmpFile): array
+{
+    if (!function_exists('imagecreatefromstring')) {
+        throw new RuntimeException('Auf dem Server fehlt die PHP-Erweiterung GD für Bilder.');
+    }
+    $info = @getimagesize($tmpFile);
+    if (!$info || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+        throw new RuntimeException('Nur JPG, PNG oder WebP.');
+    }
+    if ($info[0] * $info[1] > 40_000_000) {
+        throw new RuntimeException('Das Bild ist zu groß.');
+    }
+    $src = @imagecreatefromstring((string) file_get_contents($tmpFile));
+    if (!$src) {
+        throw new RuntimeException('Das Bild konnte nicht gelesen werden.');
+    }
+
+    foreach ([FOTO_DIR, THUMB_DIR] as $dir) {
+        if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
+            throw new RuntimeException('Konnte uploads/ nicht anlegen. Schreibrechte prüfen.');
+        }
+    }
+    $name = bin2hex(random_bytes(8)) . '.jpg';
+    $big = write_jpeg($src, FOTO_MAX, FOTO_DIR . '/' . $name, 84);
+    write_jpeg($src, THUMB_MAX, THUMB_DIR . '/' . $name, 78);
+    imagedestroy($src);
+    return ['datei' => $name, 'w' => $big[0], 'h' => $big[1]];
+}
+
+/** @return array{0: int, 1: int} tatsächliche Größe */
+function write_jpeg(\GdImage $src, int $max, string $file, int $quality): array
+{
+    $w = imagesx($src);
+    $h = imagesy($src);
+    $s = min(1, $max / max($w, $h));
+    $nw = max(1, (int) round($w * $s));
+    $nh = max(1, (int) round($h * $s));
+    $dst = imagecreatetruecolor($nw, $nh);
+    imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255)); // Transparenz -> Weiß
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    imageinterlace($dst, true);
+    if (!imagejpeg($dst, $file, $quality)) {
+        throw new RuntimeException('Konnte das Bild nicht speichern.');
+    }
+    imagedestroy($dst);
+    return [$nw, $nh];
+}
+
+/**
+ * Löscht Fotos, die weder im aktuellen Stand noch in einer Sicherung vorkommen.
+ * Frisch hochgeladene (noch nicht gespeicherte) bleiben einen Tag verschont.
+ */
+function cleanup_photos(): void
+{
+    $used = [];
+    foreach (array_merge([DATA_FILE], glob(BACKUP_DIR . '/stiefel-*.json') ?: []) as $f) {
+        preg_match_all('/"datei":\s*"([a-f0-9]{16}\.jpg)"/', (string) file_get_contents($f), $m);
+        $used += array_flip($m[1]);
+    }
+    foreach (glob(FOTO_DIR . '/*.jpg') ?: [] as $f) {
+        $n = basename($f);
+        if (!isset($used[$n]) && filemtime($f) < time() - 86400) {
+            @unlink($f);
+            @unlink(THUMB_DIR . '/' . $n);
+        }
+    }
+}
+
 // ---------------------------------------------------------------- Prüfen
 
 function validate(array $in, array $current): array
@@ -281,6 +361,22 @@ function validate(array $in, array $current): array
         $notiz = $str($r['notiz'] ?? '', "$l: Notiz", 200);
         if ($notiz !== '') {
             $row['notiz'] = $notiz;
+        }
+        $fotos = [];
+        foreach ((array) ($r['fotos'] ?? []) as $j => $f) {
+            $d = (string) ($f['datei'] ?? '');
+            if (!preg_match('/^[a-f0-9]{16}\.jpg$/', $d) || !is_file(FOTO_DIR . '/' . $d)) {
+                $err[] = "$l: Foto " . ($j + 1) . ' fehlt auf dem Server.';
+                continue;
+            }
+            [$w, $h] = getimagesize(FOTO_DIR . '/' . $d) ?: [0, 0];
+            $fotos[] = ['datei' => $d, 'text' => $str($f['text'] ?? '', "$l: Bildtext " . ($j + 1), 120), 'w' => $w, 'h' => $h];
+        }
+        if (count($fotos) > FOTOS_PER_RACE) {
+            $err[] = "$l: höchstens " . FOTOS_PER_RACE . ' Fotos.';
+        }
+        if ($fotos) {
+            $row['fotos'] = $fotos;
         }
         $out['rennen'][] = $row;
     }

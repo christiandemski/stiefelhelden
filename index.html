@@ -158,6 +158,32 @@
     </div>
   </footer>
 
+  <!-- FOTO-GALERIE -->
+  <div class="modal fade sh-gallery" id="gallery" tabindex="-1" aria-labelledby="gallery-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="gallery-title"></h2>
+          <span class="gallery-count" id="gallery-count" aria-live="polite"></span>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <div class="modal-body">
+          <div id="gallery-carousel" class="carousel slide">
+            <div class="carousel-inner"></div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#gallery-carousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Vorheriges Foto</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#gallery-carousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Nächstes Foto</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
   <script src="data.js"></script>
   <script src="main.js"></script>

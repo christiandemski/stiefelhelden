@@ -34,7 +34,20 @@ try {
             $in = json_decode((string) file_get_contents('php://input'), true, 64, JSON_THROW_ON_ERROR);
             $clean = validate((array) $in, load_content());
             save_content($clean);
+            cleanup_photos();
             reply(200, ['ok' => true, 'content' => json_decode(to_json($clean), true)]);
+
+        case 'upload':
+            $f = $_FILES['foto'] ?? null;
+            if (!is_array($f) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) {
+                $tooBig = in_array($f['error'] ?? 0, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
+                reply(400, ['error' => $tooBig ? 'Die Datei ist zu groß für den Server.' : 'Upload fehlgeschlagen.']);
+            }
+            try {
+                reply(200, ['ok' => true] + store_photo($f['tmp_name']));
+            } catch (RuntimeException $e) {
+                reply(422, ['error' => $e->getMessage()]);
+            }
 
         case 'restore':
             $in = json_decode((string) file_get_contents('php://input'), true, 4, JSON_THROW_ON_ERROR);

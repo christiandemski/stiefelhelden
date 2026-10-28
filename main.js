@@ -96,6 +96,7 @@
         <p class="race-name">${esc(r.name)}${isTogether(r) ? '<span class="badge-together">Zusammen</span>' : ""}</p>
         <p class="race-ort">${esc(r.ort)}</p>
         ${r.notiz ? `<p class="race-note">„${esc(r.notiz)}“</p>` : ""}
+        ${photoStrip(r)}
       </div>
       <span class="col-6 col-lg-1 text-end race-km order-2 order-lg-3">${fmtKm(r.km)}<small class="d-lg-none"> km</small></span>
       <ul class="col-12 col-lg-4 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
@@ -108,6 +109,57 @@
     const list = pick(f);
     put("#races", list.length ? list.map(raceHTML).join("") : `<li class="race text-body-secondary">Hier ist noch nichts. Zeit, sich anzumelden.</li>`);
   };
+
+  // ---------- Fotos: Vorschau-Reihe + Galerie ----------
+  function photoStrip(r) {
+    const fotos = r.fotos || [];
+    if (!fotos.length) return "";
+    const ri = races.indexOf(r), SHOW = 4;
+    return `<div class="race-photos">${fotos.slice(0, SHOW).map((f, j) => {
+      const more = j === SHOW - 1 && fotos.length > SHOW ? fotos.length - SHOW + 1 : 0;
+      return `<button type="button" class="race-photo" data-race="${ri}" data-i="${j}"
+          aria-label="${more ? `Alle ${fotos.length} Fotos ansehen` : `Foto ${j + 1} von ${fotos.length} ansehen`}">
+        <img src="uploads/rennen/thumb/${esc(f.datei)}" alt="" loading="lazy" width="64" height="64">
+        ${more ? `<span class="more">+${more}</span>` : ""}
+      </button>`;
+    }).join("")}</div>`;
+  }
+
+  const gallery = $("#gallery");
+  const car = $("#gallery-carousel");
+  const updateCount = () => {
+    const items = [...car.querySelectorAll(".carousel-item")];
+    $("#gallery-count").textContent = items.length < 2 ? "" : `${items.findIndex((el) => el.classList.contains("active")) + 1} / ${items.length}`;
+  };
+  const openGallery = (ri, start) => {
+    const r = races[ri];
+    const fotos = r.fotos || [];
+    const old = bootstrap.Carousel.getInstance(car);
+    if (old) old.dispose();
+    $("#gallery-title").textContent = `${r.name} · ${fmtDate(r.datum)}`;
+    put("#gallery-carousel .carousel-inner", fotos.map((f, j) => `<div class="carousel-item ${j === start ? "active" : ""}">
+        <figure class="m-0">
+          <img src="uploads/rennen/${esc(f.datei)}" alt="${esc(f.text || `Foto ${j + 1} vom ${r.name}`)}" width="${f.w}" height="${f.h}">
+          ${f.text ? `<figcaption>${esc(f.text)}</figcaption>` : ""}
+        </figure>
+      </div>`).join(""));
+    gallery.querySelectorAll(".carousel-control-prev, .carousel-control-next").forEach((b) => (b.hidden = fotos.length < 2));
+    // Tastatur übernimmt der Handler unten, damit Pfeile überall im Fenster wirken (und nicht doppelt)
+    bootstrap.Carousel.getOrCreateInstance(car, { interval: false, ride: false, touch: true, keyboard: false });
+    updateCount();
+    bootstrap.Modal.getOrCreateInstance(gallery).show();
+  };
+  car.addEventListener("slid.bs.carousel", updateCount);
+  gallery.addEventListener("keydown", (e) => {
+    const c = bootstrap.Carousel.getInstance(car);
+    if (!c) return;
+    if (e.key === "ArrowLeft") c.prev();
+    if (e.key === "ArrowRight") c.next();
+  });
+  $("#races").addEventListener("click", (e) => {
+    const b = e.target.closest(".race-photo");
+    if (b) openGallery(Number(b.dataset.race), Number(b.dataset.i));
+  });
   filterEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
