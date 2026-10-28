@@ -38,6 +38,22 @@ Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Nächster Start, Bestz
 - Der nächste Start blendet sich nach seinem Datum von selbst aus.
 - Die Kürzel der Läufer (`susen`, `christian`) sind fest; die angezeigten Namen sind änderbar.
 
+## Läufe aus Excel einlesen
+
+```bash
+php admin/import-rennen.php DATEI.xlsx --wer=christian --probe   # erst nur anzeigen
+php admin/import-rennen.php DATEI.xlsx --wer=christian           # übernehmen
+```
+
+- Spalten (Überschrift in Zeile 1): `Datum`, `Event`, `Ort`, `mit`, `Distanz`, `Zeit netto`, `Bemerkung`. Optional je weitere Person eine Spalte `Zeit <Name>`, z. B. `Zeit Susen`.
+- `--wer` = wessen Zeit in `Zeit netto` steht. In `mit` eingetragene Personen gelten als mitgelaufen, auch ohne Zeit („Zeit folgt“).
+- Bemerkung „keine offizielle Zeitnahme“ → Lauf zählt nicht für Bestzeiten.
+- Abgleich über Datum + Event-Name: beliebig oft wiederholbar, neue Läufe kommen dazu, Zeiten werden aktualisiert. Im Backend Gepflegtes (Notizen, Startnummern, Fotos) bleibt, gelöscht wird nichts. Vorher wird eine Sicherung angelegt.
+- `--ohne-beispiele` entfernt beim ersten Mal die mitgelieferten Beispiel-Rennen und -Bestzeiten.
+- Die Excel-Datei gehört nicht ins Repo (`*.xlsx` ist ausgeschlossen). Auf dem Server nach `data/` legen (dort ist sie von außen gesperrt) und nach dem Import löschen.
+
+Bestzeiten für 5 km, 10 km, Halbmarathon und Marathon berechnet die Seite automatisch aus den Rennen; manuelle Einträge im Backend ergänzen das (bei gleicher Distanz zählt die schnellere Zeit).
+
 ## Online stellen
 
 Braucht ein Webhosting **mit PHP 8.1 oder neuer** (übliches Shared Hosting reicht, Apache empfohlen). Netlify Drop oder GitHub Pages reichen dafür nicht mehr, weil dort kein PHP läuft.

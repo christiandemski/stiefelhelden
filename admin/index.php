@@ -126,7 +126,7 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
 
         <section class="tile admin-section" id="s-pbs">
           <h2>Bestzeiten</h2>
-          <p class="hint">Jede Person für sich. Zeiten als <code>mm:ss</code> oder <code>h:mm:ss</code> – die Pace rechnet die Seite selbst aus.</p>
+          <p class="hint">Für 5&nbsp;km, 10&nbsp;km, Halbmarathon und Marathon rechnet die Seite die Bestzeiten <strong>automatisch aus den Rennen</strong> aus (ohne Läufe ohne offizielle Zeitnahme). Hier nur eintragen, was dort fehlt – z.&nbsp;B. andere Distanzen oder Zeiten von Läufen, die nicht in der Rennliste stehen. Bei gleicher Distanz zählt die schnellere Zeit.</p>
           <div data-render="pbs"></div>
         </section>
 

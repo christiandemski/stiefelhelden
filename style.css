@@ -194,6 +194,8 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
 .race-times { font-size: .95rem; }
 .race-times li { display: flex; align-items: center; gap: .5rem; }
 .race-times strong { font-variant-numeric: tabular-nums; }
+.time-missing { font-size: .85rem; font-style: italic; color: var(--muted); }
+.race-times .race-unofficial { font-size: .8rem; color: var(--muted); }
 .race-bib { font-size: .85rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .badge-together { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--green-soft); color: var(--ink); border-radius: 999px; padding: .2rem .55rem; vertical-align: 2px; margin-left: .4rem; }
 

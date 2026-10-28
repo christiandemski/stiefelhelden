@@ -122,6 +122,7 @@
       return order.map((i) => {
         const r = S.rennen[i];
         r.zeiten = r.zeiten && !Array.isArray(r.zeiten) ? r.zeiten : {};
+        r.teilnehmer ||= ids.filter((id) => r.zeiten[id]);
         return `<details class="race-edit" data-index="${i}" ${open.has(r) ? "open" : ""}>
           <summary><span class="sum-date">${esc(fmtDate(r.datum))}</span><span class="sum-name">${esc(r.name || "Neues Rennen")}</span><span class="sum-km">${r.km ? esc(String(r.km).replace(".", ",")) + " km" : ""}</span></summary>
           <div class="row g-3 pt-3">
@@ -130,7 +131,19 @@
             ${input("Datum", `rennen.${i}.datum`, { type: "date", cls: "col-6 col-md-4" })}
             ${input("Kilometer", `rennen.${i}.km`, { type: "number", cls: "col-6 col-md-4", kind: "num", placeholder: "10" })}
             ${input("Startnummer", `rennen.${i}.startnummer`, { type: "number", cls: "col-6 col-md-4", kind: "int" })}
-            ${ids.map((id) => input(`Zeit ${S.laeufer[id]}`, `rennen.${i}.zeiten.${id}`, { cls: "col-6 col-md-4", placeholder: "leer = nicht gelaufen" })).join("")}
+            ${ids.map((id) => `<div class="col-md-6">
+              <div class="runner-time">
+                <div class="form-check m-0">
+                  <input class="form-check-input" type="checkbox" id="teil-${i}-${id}" data-teil="${i}" data-id="${id}" ${r.teilnehmer.includes(id) ? "checked" : ""}>
+                  <label class="form-check-label" for="teil-${i}-${id}">${esc(S.laeufer[id])} ist gelaufen</label>
+                </div>
+                <input class="form-control" data-bind="rennen.${i}.zeiten.${id}" value="${esc(r.zeiten[id])}" placeholder="Zeit, z. B. 52:07" aria-label="Zeit ${esc(S.laeufer[id])}">
+              </div>
+            </div>`).join("")}
+            <div class="col-12"><div class="form-check">
+              <input class="form-check-input" type="checkbox" id="inoff-${i}" data-bind="rennen.${i}.inoffiziell" ${r.inoffiziell ? "checked" : ""}>
+              <label class="form-check-label" for="inoff-${i}">Keine offizielle Zeitnahme <span class="text-body-secondary">(zählt nicht für Bestzeiten)</span></label>
+            </div></div>
             ${textarea("Notiz (ein Satz, optional)", `rennen.${i}.notiz`)}
             <div class="col-12">${photosHTML(i)}</div>
             <div class="col-12 text-end"><button type="button" class="btn btn-outline-danger btn-sm rounded-pill" data-act="del" data-path="rennen.${i}">Rennen löschen</button></div>
@@ -192,6 +205,17 @@
     setAt(el.dataset.bind, v);
     setDirty(true);
 
+    // Zeit eingetragen = gelaufen
+    const m = /^rennen\.(\d+)\.zeiten\.(\w+)$/.exec(el.dataset.bind);
+    if (m && v) {
+      const r = S.rennen[m[1]];
+      if (!r.teilnehmer.includes(m[2])) {
+        r.teilnehmer = ids.filter((id) => id === m[2] || r.teilnehmer.includes(id));
+        const box = $(`#teil-${m[1]}-${m[2]}`);
+        if (box) box.checked = true;
+      }
+    }
+
     // Kopfzeile eines Rennens live mitziehen
     const d = el.closest(".race-edit");
     if (d) {
@@ -211,6 +235,11 @@
     }
     if (el.dataset.wer) {
       S.naechsterStart.wer = ids.filter((id) => $(`#wer-${id}`).checked);
+      setDirty(true);
+    }
+    if (el.dataset.teil !== undefined) {
+      const i = el.dataset.teil;
+      S.rennen[i].teilnehmer = ids.filter((id) => $(`#teil-${i}-${id}`).checked);
       setDirty(true);
     }
     if (el.dataset.act === "toggle-next") {
@@ -237,7 +266,7 @@
       (S.bestzeiten[b.dataset.id] ||= []).push({ distanz: "", zeit: "", rennen: "", jahr: new Date().getFullYear() });
       render("pbs");
     } else if (act === "add-race") {
-      const r = { name: "", ort: "", datum: today(), km: null, startnummer: null, zeiten: {}, notiz: "" };
+      const r = { name: "", ort: "", datum: today(), km: null, startnummer: null, zeiten: {}, teilnehmer: [...ids], notiz: "" };
       S.rennen.push(r);
       open.add(r);
       render("rennen");

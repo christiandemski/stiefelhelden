@@ -358,6 +358,16 @@ function validate(array $in, array $current): array
                 $row['zeiten'][$id] = $time($t, "$l: Zeit " . $out['laeufer'][$id]);
             }
         }
+        // Wer gelaufen ist – auch ohne (bekannte) Zeit. Eine Zeit heißt immer: gelaufen.
+        $teil = array_values(array_filter($ids, fn ($id) => isset($row['zeiten'][$id])
+            || in_array($id, (array) ($r['teilnehmer'] ?? []), true)));
+        if (!$teil) {
+            $err[] = "$l: Bitte mindestens eine Person als gelaufen markieren.";
+        }
+        $row['teilnehmer'] = $teil;
+        if (!empty($r['inoffiziell'])) {
+            $row['inoffiziell'] = true;  // keine offizielle Zeitnahme: zählt nicht für Bestzeiten
+        }
         $notiz = $str($r['notiz'] ?? '', "$l: Notiz", 200);
         if ($notiz !== '') {
             $row['notiz'] = $notiz;

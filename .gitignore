@@ -21,3 +21,9 @@ import/
 
 # GPS-Strecken enthalten genaue Koordinaten – nie ins öffentliche Repo
 *.gpx
+
+# Tabellen mit persönlichen Läufen – nie ins öffentliche Repo
+*.xlsx
+*.xls
+*.csv
+~$*

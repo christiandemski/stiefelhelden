@@ -56,6 +56,9 @@
 .compact-table .row-tools { justify-content: flex-end; }
 .compact-table .icon-btn { width: 30px; height: 30px; font-size: .85rem; }
 
+/* Pro Person: gelaufen + Zeit */
+.runner-time { display: flex; flex-direction: column; gap: .4rem; padding: .75rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--surface); }
+
 /* Rennen zum Aufklappen */
 .race-edit { border: 1px solid var(--line); border-radius: 1rem; padding: .85rem 1.1rem; margin-bottom: .6rem; background: var(--surface); }
 .race-edit[open] { background: var(--surface-2); }

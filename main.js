@@ -21,7 +21,8 @@
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} /km`;
   };
 
-  const runnersOf = (r) => people.filter((id) => r.zeiten[id]);
+  // Wer gelaufen ist (auch ohne bekannte Zeit); ältere Daten ohne Liste: wer eine Zeit hat
+  const runnersOf = (r) => people.filter((id) => (r.teilnehmer ? r.teilnehmer.includes(id) : r.zeiten[id]));
   const isTogether = (r) => runnersOf(r).length === people.length;
   const races = [...D.rennen].sort((x, y) => y.datum.localeCompare(x.datum));
   const together = races.filter(isTogether);
@@ -56,8 +57,36 @@
   // ohne nächsten Start nimmt die Hero-Kachel die volle Breite
   if (!hasNext) $("#hero-col").className = "col-12";
 
+  // ---------- Bestzeiten: automatisch aus den Rennen + manuelle Einträge, je Distanz die schnellste ----------
+  const PB_DIST = [
+    { label: "5 km", km: 5, min: 4.95, max: 5.05 },
+    { label: "10 km", km: 10, min: 9.9, max: 10.1 },
+    { label: "Halbmarathon", km: 21.0975, min: 21, max: 21.3 },
+    { label: "Marathon", km: 42.195, min: 42.1, max: 42.4 },
+  ];
+  const distOf = (km) => PB_DIST.find((d) => km >= d.min && km <= d.max);
+  const bestOf = (id) => {
+    const best = new Map();
+    const offer = (key, pb) => {
+      const cur = best.get(key);
+      if (!cur || toSec(pb.zeit) < toSec(cur.zeit)) best.set(key, pb);
+    };
+    races.forEach((r) => {
+      const d = distOf(r.km);
+      if (d && r.zeiten[id] && !r.inoffiziell) {
+        offer(d.label, { distanz: d.label, km: d.km, zeit: r.zeiten[id], rennen: r.name, jahr: Number(r.datum.slice(0, 4)) });
+      }
+    });
+    (D.bestzeiten[id] || []).forEach((pb) => {
+      const km = kmOf(pb.distanz), d = distOf(km);
+      offer(d ? d.label : pb.distanz.trim().toLowerCase(), { ...pb, distanz: d ? d.label : pb.distanz, km: d ? d.km : km });
+    });
+    return [...best.values()].sort((a, b) => (a.km || 0) - (b.km || 0));
+  };
+  const pbs = Object.fromEntries(people.map((id) => [id, bestOf(id)]));
+
   // ---------- Bestzeiten als Tabs ----------
-  const pbPeople = people.filter((id) => (D.bestzeiten[id] || []).length);
+  const pbPeople = people.filter((id) => pbs[id].length);
   put("#pb-tabs", pbPeople.map((id, i) => `<li class="nav-item" role="presentation">
       <button class="nav-link ${i === 0 ? "active" : ""}" id="tab-${id}" data-bs-toggle="pill" data-bs-target="#pane-${id}"
         type="button" role="tab" aria-controls="pane-${id}" aria-selected="${i === 0}">
@@ -67,11 +96,11 @@
   put("#pb-panes", pbPeople.map((id, i) => `<div class="tab-pane fade ${i === 0 ? "show active" : ""}" id="pane-${id}"
       role="tabpanel" aria-labelledby="tab-${id}" tabindex="0">
       <div class="row g-3">
-        ${D.bestzeiten[id].map((pb) => `<div class="col-6 col-lg-3">
+        ${pbs[id].map((pb) => `<div class="col-6 col-lg-3">
           <article class="tile pb-tile ${pcls(id)}">
             <p class="eyebrow">${esc(pb.distanz)}</p>
             <p class="pb-time">${esc(pb.zeit)}</p>
-            <span class="pb-pace">${pace(pb.zeit, kmOf(pb.distanz))}</span>
+            ${Number.isFinite(pb.km) && pb.km > 0 ? `<span class="pb-pace">${pace(pb.zeit, pb.km)}</span>` : ""}
             <p class="pb-where">${esc(pb.rennen || "")}${pb.jahr ? " · " + pb.jahr : ""}</p>
           </article>
         </div>`).join("")}
@@ -86,7 +115,7 @@
 
   const pick = (f) => races.filter((r) => {
     if (f === "zusammen") return isTogether(r);
-    if (f !== "alle") return r.zeiten[f];
+    if (f !== "alle") return runnersOf(r).includes(f);
     return true;
   });
 
@@ -100,8 +129,10 @@
       </div>
       <span class="col-6 col-lg-1 text-end race-km order-2 order-lg-3">${fmtKm(r.km)}<small class="d-lg-none"> km</small></span>
       <ul class="col-12 col-lg-4 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
-        .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} <strong>${esc(r.zeiten[id])}</strong></li>`)
-        .join("")}</ul>
+        .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} ${r.zeiten[id]
+          ? `<strong>${esc(r.zeiten[id])}</strong>`
+          : '<span class="time-missing">Zeit folgt</span>'}</li>`)
+        .join("")}${r.inoffiziell ? '<li class="race-unofficial">ohne offizielle Zeitnahme</li>' : ""}</ul>
       <span class="col-12 col-lg-1 text-lg-end race-bib order-5">${r.startnummer ? `<span class="d-lg-none">Startnr. </span>#${r.startnummer}` : ""}</span>
     </li>`;
 
