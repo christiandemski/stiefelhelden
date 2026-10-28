@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 const ROOT        = __DIR__ . '/..';
 const DATA_FILE   = ROOT . '/data/stiefel.json';
+const EXAMPLE_FILE = ROOT . '/data/stiefel.example.json';
 const JS_FILE     = ROOT . '/data.js';
 const CONFIG_FILE = ROOT . '/data/config.php';
 const BACKUP_DIR  = ROOT . '/data/backups';
@@ -83,6 +84,21 @@ function e(string $s): string
 
 // ---------------------------------------------------------------- Laden & Speichern
 
+/**
+ * Inhalte und data.js kommen bewusst nicht aus Git (sonst überschreibt jede Bereitstellung
+ * das, was im Backend gepflegt wurde). Fehlen sie, werden sie aus der Vorlage angelegt –
+ * vorhandene Dateien bleiben unangetastet.
+ */
+function ensure_content(): void
+{
+    if (!is_file(DATA_FILE) && !copy(EXAMPLE_FILE, DATA_FILE)) {
+        throw new RuntimeException('Konnte data/stiefel.json nicht anlegen. Schreibrechte für data/ prüfen.');
+    }
+    if (!is_file(JS_FILE)) {
+        write_js(to_json(load_content()));
+    }
+}
+
 function load_content(): array
 {
     return json_decode((string) file_get_contents(DATA_FILE), true, 64, JSON_THROW_ON_ERROR);
@@ -125,6 +141,11 @@ function save_content(array $content): void
 
     $json = to_json($content);
     write_atomic(DATA_FILE, $json . "\n");
+    write_js($json);
+}
+
+function write_js(string $json): void
+{
     write_atomic(JS_FILE,
         "// Wird vom Backend (/admin/) erzeugt – Änderungen bitte dort vornehmen.\n" .
         "window.STIEFEL = " . $json . ";\n");

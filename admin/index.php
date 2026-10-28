@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
 
+ensure_content();
 start_session();
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');

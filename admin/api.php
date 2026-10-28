@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
 
+ensure_content();
 start_session();
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');

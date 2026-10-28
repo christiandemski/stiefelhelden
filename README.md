@@ -8,8 +8,9 @@ Team-Seite mit kleinem Backend zur Pflege. Kein Build, kein Framework, keine Dat
 | `style.css`             | Gestaltung, Farben für Hell und Dunkel oben in den `[data-bs-theme]`-Blöcken |
 | `main.js`               | Baut Kacheln, Bestzeiten, Rennen und Liste aus `data.js`               |
 | `theme.js`              | Hell/Dunkel: folgt dem System, Schalter merkt sich die Wahl            |
-| `data.js`               | **Wird vom Backend erzeugt** – nicht von Hand bearbeiten               |
-| `data/stiefel.json`     | Die eigentlichen Inhalte (Quelle für `data.js`)                        |
+| `data.js`               | **Wird vom Backend erzeugt** – nicht von Hand bearbeiten, nicht im Repo |
+| `data/stiefel.json`     | Die eigentlichen Inhalte (Quelle für `data.js`), nicht im Repo          |
+| `data/stiefel.example.json` | Startvorlage: daraus entstehen die beiden Dateien oben, falls sie fehlen |
 | `data/backups/`         | Automatische Sicherungen vor jedem Speichern (die letzten 30)          |
 | `data/config.php`       | Passwort-Hash fürs Backend (wird erzeugt, nicht ins Repo)              |
 | `admin/`                | Das Backend                                                            |
@@ -41,9 +42,15 @@ Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Nächster Start, Bestz
 
 Braucht ein Webhosting **mit PHP 8.1 oder neuer** (übliches Shared Hosting reicht, Apache empfohlen). Netlify Drop oder GitHub Pages reichen dafür nicht mehr, weil dort kein PHP läuft.
 
-1. Alles außer `.ddev/` und `.git/` hochladen.
-2. Der Webserver muss in `data/` und in `data.js` schreiben dürfen.
-3. Passwort setzen: lokal `php admin/set-password.php` ausführen und die erzeugte `data/config.php` mit hochladen (oder per SSH auf dem Server ausführen).
-4. HTTPS einschalten, damit Passwort und Sitzung verschlüsselt übertragen werden.
+**Code kommt über Git, Inhalte über das Backend.** `data.js` und `data/stiefel.json` sind deshalb nicht im Repo – sonst würde jede Bereitstellung die im Backend gepflegten Inhalte überschreiben.
+
+Einrichtung mit Plesk-Git:
+
+1. Repository verbinden, Serverpfad = Dokumentstamm der Domain, z. B. `/stiefelhelden.de/httpdocs`.
+2. Als zusätzliche Bereitstellungsaktion eintragen: `php admin/init.php`
+   (legt beim ersten Mal die Inhalte aus `data/stiefel.example.json` an; danach ändert es nichts mehr). Alternativ reicht es, einmal `/admin/` aufzurufen.
+3. Der Webserver muss in `data/` und im Dokumentstamm (für `data.js`) schreiben dürfen.
+4. Passwort setzen: per SSH `php admin/set-password.php` im Dokumentstamm ausführen – oder lokal ausführen und die erzeugte `data/config.php` per FTP hochladen.
+5. HTTPS einschalten, damit Passwort und Sitzung verschlüsselt übertragen werden.
 
 Bei **nginx** statt Apache werden `.htaccess`-Dateien ignoriert: dann `data/` und versteckte Dateien in der Server-Konfiguration sperren.

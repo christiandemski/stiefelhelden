@@ -7,3 +7,7 @@ data/backups/
 .idea/
 .claude-account
 entwuerfe/
+
+# Inhalte werden auf dem Server im Backend gepflegt; ins Repo kommt nur die Vorlage
+data/stiefel.json
+data.js
