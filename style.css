@@ -116,12 +116,13 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
 /* ---------- Hero-Kachel ---------- */
 .tile-hero { position: relative; overflow: hidden; min-height: 460px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; }
 .tile-hero > * { position: relative; }
+/* Die echte Stiefelrunde (schon wie Italien gedreht) */
 .hero-route {
-  position: absolute !important; right: -4%; top: 50%; height: 125%; width: auto;
-  transform: translateY(-50%) rotate(-10deg); overflow: visible;
+  position: absolute !important; right: 2%; top: 50%; height: 108%; width: auto;
+  transform: translateY(-50%); overflow: visible;
 }
 .hero-route path {
-  fill: rgba(255, 255, 255, .03); stroke: var(--green); stroke-width: 2; stroke-linejoin: round;
+  fill: rgba(255, 255, 255, .03); stroke: var(--green); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round;
   stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 3s .3s cubic-bezier(.6, 0, .2, 1) forwards;
 }
 .hero-route circle { fill: var(--green); }
@@ -261,7 +262,7 @@ footer { margin-top: clamp(4rem, 9vw, 7.5rem); }
 @media (max-width: 991.98px) {
   .race-km { font-size: 1.2rem; }
   .tile-hero { min-height: 520px; }
-  .hero-route { height: 90%; top: 38%; right: -18%; }
+  .hero-route { height: 78%; top: 36%; right: -12%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
