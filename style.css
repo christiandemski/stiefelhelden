@@ -196,7 +196,10 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
 .race-times strong { font-variant-numeric: tabular-nums; }
 .time-missing { font-size: .85rem; font-style: italic; color: var(--muted); }
 .race-times .race-unofficial { font-size: .8rem; color: var(--muted); }
-.race-bib { font-size: .85rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.race-bib {
+  margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); border-radius: .4rem; padding: .05rem .4rem;
+}
 .badge-together { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--green-soft); color: var(--ink); border-radius: 999px; padding: .2rem .55rem; vertical-align: 2px; margin-left: .4rem; }
 
 /* Fotos am Rennen */

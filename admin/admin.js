@@ -123,6 +123,10 @@
         const r = S.rennen[i];
         r.zeiten = r.zeiten && !Array.isArray(r.zeiten) ? r.zeiten : {};
         r.teilnehmer ||= ids.filter((id) => r.zeiten[id]);
+        r.startnummern = r.startnummern && !Array.isArray(r.startnummern) ? r.startnummern : {};
+        // alte gemeinsame Startnummer -> erste Person, die gelaufen ist
+        if (r.startnummer != null && !Object.keys(r.startnummern).length && r.teilnehmer.length) r.startnummern[r.teilnehmer[0]] = r.startnummer;
+        delete r.startnummer;
         return `<details class="race-edit" data-index="${i}" ${open.has(r) ? "open" : ""}>
           <summary><span class="sum-date">${esc(fmtDate(r.datum))}</span><span class="sum-name">${esc(r.name || "Neues Rennen")}</span><span class="sum-km">${r.km ? esc(String(r.km).replace(".", ",")) + " km" : ""}</span></summary>
           <div class="row g-3 pt-3">
@@ -130,14 +134,16 @@
             ${input("Ort", `rennen.${i}.ort`)}
             ${input("Datum", `rennen.${i}.datum`, { type: "date", cls: "col-6 col-md-4" })}
             ${input("Kilometer", `rennen.${i}.km`, { type: "number", cls: "col-6 col-md-4", kind: "num", placeholder: "10" })}
-            ${input("Startnummer", `rennen.${i}.startnummer`, { type: "number", cls: "col-6 col-md-4", kind: "int" })}
             ${ids.map((id) => `<div class="col-md-6">
               <div class="runner-time">
                 <div class="form-check m-0">
                   <input class="form-check-input" type="checkbox" id="teil-${i}-${id}" data-teil="${i}" data-id="${id}" ${r.teilnehmer.includes(id) ? "checked" : ""}>
                   <label class="form-check-label" for="teil-${i}-${id}">${esc(S.laeufer[id])} ist gelaufen</label>
                 </div>
-                <input class="form-control" data-bind="rennen.${i}.zeiten.${id}" value="${esc(r.zeiten[id])}" placeholder="Zeit, z. B. 52:07" aria-label="Zeit ${esc(S.laeufer[id])}">
+                <div class="d-flex gap-2">
+                  <input class="form-control" data-bind="rennen.${i}.zeiten.${id}" value="${esc(r.zeiten[id])}" placeholder="Zeit, z. B. 52:07" aria-label="Zeit ${esc(S.laeufer[id])}">
+                  <input class="form-control nr-input" type="number" inputmode="numeric" data-bind="rennen.${i}.startnummern.${id}" data-kind="int" value="${esc(r.startnummern[id])}" placeholder="Startnr." aria-label="Startnummer ${esc(S.laeufer[id])}">
+                </div>
               </div>
             </div>`).join("")}
             <div class="col-12"><div class="form-check">
@@ -205,9 +211,9 @@
     setAt(el.dataset.bind, v);
     setDirty(true);
 
-    // Zeit eingetragen = gelaufen
-    const m = /^rennen\.(\d+)\.zeiten\.(\w+)$/.exec(el.dataset.bind);
-    if (m && v) {
+    // Zeit oder Startnummer eingetragen = gelaufen
+    const m = /^rennen\.(\d+)\.(?:zeiten|startnummern)\.(\w+)$/.exec(el.dataset.bind);
+    if (m && v != null && v !== "") {
       const r = S.rennen[m[1]];
       if (!r.teilnehmer.includes(m[2])) {
         r.teilnehmer = ids.filter((id) => id === m[2] || r.teilnehmer.includes(id));
@@ -266,7 +272,7 @@
       (S.bestzeiten[b.dataset.id] ||= []).push({ distanz: "", zeit: "", rennen: "", jahr: new Date().getFullYear() });
       render("pbs");
     } else if (act === "add-race") {
-      const r = { name: "", ort: "", datum: today(), km: null, startnummer: null, zeiten: {}, teilnehmer: [...ids], notiz: "" };
+      const r = { name: "", ort: "", datum: today(), km: null, zeiten: {}, startnummern: {}, teilnehmer: [...ids], notiz: "" };
       S.rennen.push(r);
       open.add(r);
       render("rennen");

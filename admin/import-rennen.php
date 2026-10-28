@@ -11,6 +11,7 @@
  * Erwartete Spalten (Überschrift in Zeile 1, Reihenfolge egal):
  *   Datum, Event, Ort, Land, mit, Distanz, Zeit netto, Bemerkung
  *   optional je weitere Person: „Zeit <Name>“, z. B. „Zeit Susen“
+ *   optional: „Startnummer“ (für --wer) und „Startnummer <Name>“
  *
  * Abgleich: gleiches Datum + gleicher Event-Name (ohne Nummerierung wie „7.“) = derselbe Lauf.
  * Neue Läufe kommen dazu, Zeiten werden aus der Liste übernommen. Was im Backend gepflegt
@@ -149,6 +150,7 @@ $rows = read_xlsx($file);
 $head = array_shift($rows) ?? [];
 $col = [];
 $timeCols = [];  // Spalte => Kürzel
+$bibCols = [];   // Spalte => Kürzel (optional: „Startnummer“, „Startnummer Susen“)
 foreach ($head as $c => $h) {
     $h = mb_strtolower(trim((string) $h));
     foreach (['datum', 'event', 'ort', 'land', 'mit', 'distanz', 'bemerkung'] as $k) {
@@ -160,6 +162,10 @@ foreach ($head as $c => $h) {
         $timeCols[$c] = $opt['wer'];
     } elseif (preg_match('/^zeit\s+(.+)$/u', $h, $m) && isset($byName[trim($m[1])])) {
         $timeCols[$c] = $byName[trim($m[1])];
+    } elseif (in_array($h, ['startnummer', 'startnr', 'startnr.'], true)) {
+        $bibCols[$c] = $opt['wer'];
+    } elseif (preg_match('/^startn(?:umme)?r\.?\s+(.+)$/u', $h, $m) && isset($byName[trim($m[1])])) {
+        $bibCols[$c] = $byName[trim($m[1])];
     }
 }
 foreach (['datum', 'event', 'distanz'] as $k) {
@@ -197,6 +203,13 @@ foreach ($rows as $i => $r) {
             $zeiten[$id] = to_time($v);
         }
     }
+    $nrs = [];
+    foreach ($bibCols as $c => $id) {
+        $v = $r[$c] ?? '';
+        if (is_float($v) && $v > 0 || is_string($v) && ctype_digit(trim($v))) {
+            $nrs[$id] = (int) $v;
+        }
+    }
     $teil[] = $opt['wer'];  // es ist die Liste dieser Person: jeder Lauf darin ist ihrer
     foreach (preg_split('/\s*(?:,|&|\bund\b|\+)\s*/u', clean($r[$col['mit'] ?? ''] ?? '')) as $n) {
         $n = mb_strtolower(trim($n));
@@ -209,12 +222,15 @@ foreach ($rows as $i => $r) {
             $problems[] = "Zeile $line: „$n“ in Spalte „mit“ ist keine bekannte Person – ignoriert.";
         }
     }
-    $teil = array_values(array_intersect($ids, array_unique(array_merge($teil, array_keys($zeiten)))));
+    $teil = array_values(array_intersect($ids, array_unique(array_merge($teil, array_keys($zeiten), array_keys($nrs)))));
 
     $bem = clean($r[$col['bemerkung'] ?? ''] ?? '');
     $ort = clean($r[$col['ort'] ?? ''] ?? '');
 
     $run = ['name' => $event, 'ort' => $ort, 'datum' => $datum, 'km' => $km, 'zeiten' => $zeiten, 'teilnehmer' => $teil];
+    if ($nrs) {
+        $run['startnummern'] = $nrs;
+    }
     if (preg_match('/keine offizielle zeitnahme/i', $bem)) {
         $run['inoffiziell'] = true;
     } elseif ($bem !== '') {
@@ -284,6 +300,10 @@ foreach ($imported as $run) {
     }
     if (empty($r['notiz']) && !empty($run['notiz'])) {
         $r['notiz'] = $run['notiz'];
+    }
+    // Startnummern nur ergänzen, im Backend eingetragene bleiben
+    if (!empty($run['startnummern'])) {
+        $r['startnummern'] = (array) ($r['startnummern'] ?? []) + $run['startnummern'];
     }
     if (json_encode($r) === $before) {
         $same++;

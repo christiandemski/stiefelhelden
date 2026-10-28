@@ -347,10 +347,6 @@ function validate(array $in, array $current): array
             'datum' => $date($r['datum'] ?? '', $l),
             'km'    => round((float) $km, 2),
         ];
-        $nr = $intOrNull($r['startnummer'] ?? null, "$l: Startnummer", 0, 999999);
-        if ($nr !== null) {
-            $row['startnummer'] = $nr;
-        }
         $row['zeiten'] = [];
         foreach ($ids as $id) {
             $t = trim((string) ($r['zeiten'][$id] ?? ''));
@@ -358,13 +354,29 @@ function validate(array $in, array $current): array
                 $row['zeiten'][$id] = $time($t, "$l: Zeit " . $out['laeufer'][$id]);
             }
         }
-        // Wer gelaufen ist – auch ohne (bekannte) Zeit. Eine Zeit heißt immer: gelaufen.
-        $teil = array_values(array_filter($ids, fn ($id) => isset($row['zeiten'][$id])
+        // Startnummer je Person
+        $nrs = [];
+        foreach ($ids as $id) {
+            $nr = $intOrNull($r['startnummern'][$id] ?? null, "$l: Startnummer " . $out['laeufer'][$id], 0, 999999);
+            if ($nr !== null) {
+                $nrs[$id] = $nr;
+            }
+        }
+        // Wer gelaufen ist – auch ohne (bekannte) Zeit. Zeit oder Startnummer heißt immer: gelaufen.
+        $teil = array_values(array_filter($ids, fn ($id) => isset($row['zeiten'][$id]) || isset($nrs[$id])
             || in_array($id, (array) ($r['teilnehmer'] ?? []), true)));
         if (!$teil) {
             $err[] = "$l: Bitte mindestens eine Person als gelaufen markieren.";
         }
         $row['teilnehmer'] = $teil;
+        // Früher gab es nur eine Startnummer pro Rennen: geht an die erste Person, die gelaufen ist
+        $legacy = $intOrNull($r['startnummer'] ?? null, "$l: Startnummer", 0, 999999);
+        if ($legacy !== null && !$nrs && $teil) {
+            $nrs[$teil[0]] = $legacy;
+        }
+        if ($nrs) {
+            $row['startnummern'] = $nrs;
+        }
         if (!empty($r['inoffiziell'])) {
             $row['inoffiziell'] = true;  // keine offizielle Zeitnahme: zählt nicht für Bestzeiten
         }

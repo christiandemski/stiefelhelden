@@ -24,6 +24,8 @@
   // Wer gelaufen ist (auch ohne bekannte Zeit); ältere Daten ohne Liste: wer eine Zeit hat
   const runnersOf = (r) => people.filter((id) => (r.teilnehmer ? r.teilnehmer.includes(id) : r.zeiten[id]));
   const isTogether = (r) => runnersOf(r).length === people.length;
+  // Startnummer je Person; ältere Daten hatten nur eine pro Rennen
+  const bibOf = (r, id) => (r.startnummern ? r.startnummern[id] : runnersOf(r)[0] === id ? r.startnummer : null);
   const races = [...D.rennen].sort((x, y) => y.datum.localeCompare(x.datum));
   const together = races.filter(isTogether);
 
@@ -128,12 +130,12 @@
         ${photoStrip(r)}
       </div>
       <span class="col-6 col-lg-1 text-end race-km order-2 order-lg-3">${fmtKm(r.km)}<small class="d-lg-none"> km</small></span>
-      <ul class="col-12 col-lg-4 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
+      <ul class="col-12 col-lg-5 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
         .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} ${r.zeiten[id]
           ? `<strong>${esc(r.zeiten[id])}</strong>`
-          : '<span class="time-missing">Zeit folgt</span>'}</li>`)
+          : '<span class="time-missing">Zeit folgt</span>'}${bibOf(r, id)
+          ? `<span class="race-bib"><span class="visually-hidden">Startnummer </span>#${bibOf(r, id)}</span>` : ""}</li>`)
         .join("")}${r.inoffiziell ? '<li class="race-unofficial">ohne offizielle Zeitnahme</li>' : ""}</ul>
-      <span class="col-12 col-lg-1 text-lg-end race-bib order-5">${r.startnummer ? `<span class="d-lg-none">Startnr. </span>#${r.startnummer}` : ""}</span>
     </li>`;
 
   const render = (f) => {
