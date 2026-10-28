@@ -139,22 +139,24 @@
       }).join("");
     },
 
-    liste: () => S.wunschliste.length ? S.wunschliste.map((w, i) => `<div class="edit-row">
-        <div class="form-check pt-4"><input class="form-check-input" type="checkbox" id="${fid(`wunschliste.${i}.erledigt`)}" data-bind="wunschliste.${i}.erledigt" ${w.erledigt ? "checked" : ""} aria-label="Geschafft"></div>
-        <div class="row g-2 flex-grow-1">
-          ${input("Rennen", `wunschliste.${i}.name`, { cls: "col-md-5" })}
-          ${input("Notiz", `wunschliste.${i}.notiz`, { cls: "col-md-7" })}
-        </div>
-        ${tools(`wunschliste.${i}`)}
-      </div>`).join("") : empty("Die Liste ist leer."),
+    liste: () => S.wunschliste.length ? `<div class="table-responsive"><table class="table compact-table align-middle m-0">
+        <thead><tr><th class="w-check">Geschafft</th><th class="w-name">Rennen</th><th>Notiz</th><th class="w-tools"><span class="visually-hidden">Aktionen</span></th></tr></thead>
+        <tbody>${S.wunschliste.map((w, i) => `<tr>
+          <td class="text-center"><input class="form-check-input m-0" type="checkbox" data-bind="wunschliste.${i}.erledigt" ${w.erledigt ? "checked" : ""} aria-label="Geschafft (Zeile ${i + 1})"></td>
+          ${cell(`Rennen (Zeile ${i + 1})`, `wunschliste.${i}.name`)}
+          ${cell(`Notiz (Zeile ${i + 1})`, `wunschliste.${i}.notiz`)}
+          <td>${tools(`wunschliste.${i}`)}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>` : empty("Die Liste ist leer."),
 
-    links: () => S.links.length ? S.links.map((_, i) => `<div class="edit-row">
-        <div class="row g-2 flex-grow-1">
-          ${input("Text", `links.${i}.label`, { cls: "col-md-4", placeholder: "Instagram" })}
-          ${input("Adresse", `links.${i}.url`, { type: "url", cls: "col-md-8", placeholder: "https://…" })}
-        </div>
-        ${tools(`links.${i}`)}
-      </div>`).join("") : empty("Keine Links."),
+    links: () => S.links.length ? `<div class="table-responsive"><table class="table compact-table align-middle m-0">
+        <thead><tr><th class="w-label">Text</th><th>Adresse</th><th class="w-tools"><span class="visually-hidden">Aktionen</span></th></tr></thead>
+        <tbody>${S.links.map((_, i) => `<tr>
+          ${cell(`Text (Link ${i + 1})`, `links.${i}.label`, { placeholder: "Instagram" })}
+          ${cell(`Adresse (Link ${i + 1})`, `links.${i}.url`, { type: "url", placeholder: "https://…" })}
+          <td>${tools(`links.${i}`)}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>` : empty("Keine Links."),
   };
 
   const render = (...names) => {
