@@ -181,6 +181,7 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
   </div>
 
   <script type="application/json" id="content-data"><?= to_json(load_content()) ?></script>
+  <script type="application/json" id="anzeige-def"><?= json_encode(ANZEIGE, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
   <script type="application/json" id="texte-def"><?= json_encode(array_map(fn ($t) => ['label' => $t[0], 'rows' => $t[3]], TEXTE), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
   <script src="admin.js"></script>
 <?php endif; ?>

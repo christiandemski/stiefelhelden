@@ -28,6 +28,8 @@
   const statusOf = (r, id) => (r.status || {})[id];
   // Startnummer je Person; ältere Daten hatten nur eine pro Rennen
   const bibOf = (r, id) => (r.startnummern ? r.startnummern[id] : runnersOf(r)[0] === id ? r.startnummer : null);
+  // Was die Seite zeigt (im Backend unter „Allgemein“); ältere data.js ohne Angabe: alles
+  const show = { zeiten: true, startnummern: true, status: true, bestzeiten: true, ...D.anzeige };
   const races = [...D.rennen].sort((x, y) => y.datum.localeCompare(x.datum));
   const together = races.filter(isTogether);
 
@@ -96,7 +98,11 @@
   const pbs = Object.fromEntries(people.map((id) => [id, bestOf(id)]));
 
   // ---------- Bestzeiten als Tabs ----------
-  const pbPeople = people.filter((id) => pbs[id].length);
+  if (!show.bestzeiten) {
+    $("#bestzeiten").remove();
+    document.querySelector('#nav a[href="#bestzeiten"]').parentElement.remove();
+  }
+  const pbPeople = show.bestzeiten ? people.filter((id) => pbs[id].length) : [];
   put("#pb-tabs", pbPeople.map((id, i) => `<li class="nav-item" role="presentation">
       <button class="nav-link ${i === 0 ? "active" : ""}" id="tab-${id}" data-bs-toggle="pill" data-bs-target="#pane-${id}"
         type="button" role="tab" aria-controls="pane-${id}" aria-selected="${i === 0}">
@@ -118,6 +124,7 @@
     </div>`).join(""));
 
   // ---------- Rennen ----------
+  put("#race-head-who", show.zeiten && show.startnummern ? "Zeiten &amp; Startnummern" : show.zeiten ? "Zeiten" : show.startnummern ? "Dabei &amp; Startnummern" : "Dabei");
   const filterEl = put("#filter",
     [["alle", "Alle"], ["zusammen", "Zusammen"], ...people.map((id) => [id, name(id)])]
       .map(([k, label], i) => `<button type="button" class="btn" data-f="${k}" aria-pressed="${i === 0}">${esc(label)}</button>`)
@@ -141,12 +148,13 @@
       <span class="col-6 col-lg-1 text-end race-km order-2 order-lg-3">${fmtKm(r.km)}<small class="d-lg-none"> km</small></span>
       <ul class="col-12 col-lg-5 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
         .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} ${statusOf(r, id)
-          ? `<abbr class="race-status" title="${STATUS[statusOf(r, id)]}">${statusOf(r, id).toUpperCase()}</abbr>`
+          ? show.status ? `<abbr class="race-status" title="${STATUS[statusOf(r, id)]}">${statusOf(r, id).toUpperCase()}</abbr>` : ""
+          : !show.zeiten ? ""
           : r.zeiten[id]
           ? `<strong>${esc(r.zeiten[id])}</strong>`
-          : '<span class="time-missing">Zeit folgt</span>'}${bibOf(r, id)
+          : '<span class="time-missing">Zeit folgt</span>'}${show.startnummern && bibOf(r, id)
           ? `<span class="race-bib"><span class="visually-hidden">Startnummer </span>#${bibOf(r, id)}</span>` : ""}</li>`)
-        .join("")}${r.inoffiziell ? '<li class="race-unofficial">ohne offizielle Zeitnahme</li>' : ""}</ul>
+        .join("")}${show.zeiten && r.inoffiziell ? '<li class="race-unofficial">ohne offizielle Zeitnahme</li>' : ""}</ul>
     </li>`;
 
   const render = (f) => {

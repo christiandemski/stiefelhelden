@@ -35,6 +35,14 @@ const TEXTE = [
     'footerTitel'     => ['Fußzeile', 'Bis zur nächsten Runde.', 100, 1],
 ];
 
+/** Was die Seite zeigt (Schalter im Backend unter „Allgemein“). Schlüssel => Beschriftung; Standard: alles an */
+const ANZEIGE = [
+    'zeiten'       => 'Zeiten bei den Rennen',
+    'startnummern' => 'Startnummern',
+    'status'       => 'DNS / DNF',
+    'bestzeiten'   => 'Bereich „Bestzeiten“',
+];
+
 final class ValidationError extends RuntimeException
 {
     /** @param string[] $errors */
@@ -126,6 +134,7 @@ function load_content(): array
     $c = json_decode((string) file_get_contents(DATA_FILE), true, 64, JSON_THROW_ON_ERROR);
     // Stände ohne (alle) Texte bekommen die Standardtexte
     $c['texte'] = array_merge(array_map(fn ($t) => $t[1], TEXTE), array_intersect_key((array) ($c['texte'] ?? []), TEXTE));
+    $c['anzeige'] = array_merge(array_map(fn () => true, ANZEIGE), array_intersect_key((array) ($c['anzeige'] ?? []), ANZEIGE));
     return $c;
 }
 
@@ -453,6 +462,11 @@ function validate(array $in, array $current): array
             $err[] = 'Link #' . ($i + 1) . ': Adresse muss mit https:// beginnen.';
         }
         $out['links'][] = ['label' => $str($lnk['label'] ?? '', 'Link #' . ($i + 1) . ': Text', 30, true), 'url' => $url];
+    }
+
+    $out['anzeige'] = [];
+    foreach (ANZEIGE as $k => $_) {
+        $out['anzeige'][$k] = (bool) ($in['anzeige'][$k] ?? true);
     }
 
     // Texte: leer heißt Standardtext

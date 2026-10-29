@@ -34,6 +34,7 @@ DDEV läuft mit PHP 8.2 und Apache (wie auf üblichem Webhosting, damit die `.ht
 Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Texte, Nächster Start, Bestzeiten, Rennen, Die Liste, Links. „Speichern“ (oder Strg+S) prüft alle Eingaben und veröffentlicht sofort. Vor jedem Speichern wird der alte Stand gesichert; unter „Sicherungen“ lässt sich jeder davon wiederherstellen.
 
 - Zeiten als `mm:ss` oder `h:mm:ss`. Wer nicht dabei war: Haken raus. Dabei, aber nicht gestartet bzw. nicht ins Ziel gekommen: DNS bzw. DNF wählen (dann ohne Zeit und nicht für Bestzeiten; das Rennen zählt trotzdem als „zusammen“).
+- Unter „Allgemein → Auf der Seite zeigen“ lassen sich Zeiten, Startnummern, DNS/DNF und der Bereich „Bestzeiten“ ausblenden – wenn es eher um die Erlebnisse als um die Uhr gehen soll. Die Angaben bleiben im Backend erhalten.
 - Unter „Texte“ stehen die festen Texte der Seite (Überschriften, die Geschichte der Runde, Fußzeile). `*Wort*` wird hervorgehoben, ein leeres Feld setzt den Standardtext zurück.
 - Die Pace und die Kennzahlen oben (Rennen, davon zusammen, km Seite an Seite) rechnet die Seite selbst aus.
 - Der nächste Start blendet sich nach seinem Datum von selbst aus.

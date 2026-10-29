@@ -5,6 +5,7 @@
   const CSRF = $('meta[name="csrf"]').content;
   let S = JSON.parse($("#content-data").textContent);
   const TEXTE = JSON.parse($("#texte-def").textContent);
+  const ANZEIGE = JSON.parse($("#anzeige-def").textContent);
   const ids = Object.keys(S.laeufer);
   const open = new WeakSet();   // aufgeklappte Rennen
   let dirty = false;
@@ -75,7 +76,13 @@
     allgemein: () =>
       ids.map((id) => input(`Name (${id})`, `laeufer.${id}`, { cls: "col-md-4" })).join("") +
       input("Laufen zusammen seit", "seit", { type: "number", cls: "col-md-4", kind: "int" }) +
-      input("Länge der Stiefelrunde", "stiefelrunde.distanz", { cls: "col-md-4", placeholder: "11,4 km" }),
+      input("Länge der Stiefelrunde", "stiefelrunde.distanz", { cls: "col-md-4", placeholder: "11,4 km" }) +
+      `<div class="col-12"><span class="form-label d-block">Auf der Seite zeigen</span>
+        ${Object.entries(ANZEIGE).map(([k, label]) => `<div class="form-check form-switch form-check-inline">
+          <input class="form-check-input" type="checkbox" role="switch" id="anz-${k}" data-bind="anzeige.${k}" ${S.anzeige[k] ? "checked" : ""}>
+          <label class="form-check-label" for="anz-${k}">${esc(label)}</label></div>`).join("")}
+        <div class="form-text">Ausgeblendetes bleibt hier gespeichert und lässt sich jederzeit wieder einschalten.</div>
+      </div>`,
 
     texte: () => Object.entries(TEXTE).map(([k, t]) => t.rows > 1
       ? textarea(t.label, `texte.${k}`, "col-12", t.rows)
