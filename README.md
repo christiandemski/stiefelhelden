@@ -31,9 +31,10 @@ DDEV läuft mit PHP 8.2 und Apache (wie auf üblichem Webhosting, damit die `.ht
 
 ## Inhalte pflegen
 
-Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Nächster Start, Bestzeiten, Rennen, Die Liste, Links. „Speichern“ (oder Strg+S) prüft alle Eingaben und veröffentlicht sofort. Vor jedem Speichern wird der alte Stand gesichert; unter „Sicherungen“ lässt sich jeder davon wiederherstellen.
+Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Texte, Nächster Start, Bestzeiten, Rennen, Die Liste, Links. „Speichern“ (oder Strg+S) prüft alle Eingaben und veröffentlicht sofort. Vor jedem Speichern wird der alte Stand gesichert; unter „Sicherungen“ lässt sich jeder davon wiederherstellen.
 
-- Zeiten als `mm:ss` oder `h:mm:ss`. Wer nicht mitgelaufen ist: Zeit leer lassen.
+- Zeiten als `mm:ss` oder `h:mm:ss`. Wer nicht dabei war: Haken raus. Dabei, aber nicht gestartet bzw. nicht ins Ziel gekommen: DNS bzw. DNF wählen (dann ohne Zeit und nicht für Bestzeiten; das Rennen zählt trotzdem als „zusammen“).
+- Unter „Texte“ stehen die festen Texte der Seite (Überschriften, die Geschichte der Runde, Fußzeile). `*Wort*` wird hervorgehoben, ein leeres Feld setzt den Standardtext zurück.
 - Die Pace und die Kennzahlen oben (Rennen, davon zusammen, km Seite an Seite) rechnet die Seite selbst aus.
 - Der nächste Start blendet sich nach seinem Datum von selbst aus.
 - Die Kürzel der Läufer (`susen`, `christian`) sind fest; die angezeigten Namen sind änderbar.
@@ -46,7 +47,7 @@ php admin/import-rennen.php DATEI.xlsx --wer=christian           # übernehmen
 ```
 
 - Spalten (Überschrift in Zeile 1): `Datum`, `Event`, `Ort`, `mit`, `Distanz`, `Zeit netto`, `Bemerkung`. Optional je weitere Person eine Spalte `Zeit <Name>`, z. B. `Zeit Susen`.
-- `--wer` = wessen Zeit in `Zeit netto` steht. In `mit` eingetragene Personen gelten als mitgelaufen, auch ohne Zeit („Zeit folgt“).
+- `--wer` = wessen Zeit in `Zeit netto` steht. `DNS` oder `DNF` statt einer Zeit wird übernommen. In `mit` eingetragene Personen gelten als mitgelaufen, auch ohne Zeit („Zeit folgt“).
 - Bemerkung „keine offizielle Zeitnahme“ → Lauf zählt nicht für Bestzeiten.
 - Abgleich über Datum + Event-Name: beliebig oft wiederholbar, neue Läufe kommen dazu, Zeiten werden aktualisiert. Im Backend Gepflegtes (Notizen, Startnummern, Fotos) bleibt, gelöscht wird nichts. Vorher wird eine Sicherung angelegt.
 - `--ohne-beispiele` entfernt beim ersten Mal die mitgelieferten Beispiel-Rennen und -Bestzeiten.

@@ -76,7 +76,7 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
   background: var(--surface); border: 1px solid var(--line); border-radius: 1.5rem;
   padding: clamp(1.25rem, 2.5vw, 2rem);
   box-shadow: var(--shadow);
-  transition: transform .3s ease, box-shadow .3s ease, background-color .3s;
+  transition: background-color .3s;
 }
 .tile-navy { background: var(--hero-bg); color: #fff; border-color: var(--hero-bg); }
 .tile-green { background: var(--green); color: var(--navy); border-color: var(--green); }
@@ -147,7 +147,6 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
 .stat .stat-v { margin: 0; font-size: clamp(1.9rem, 3.4vw, 2.75rem); font-weight: 300; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .stat .stat-v small { font-size: .45em; letter-spacing: 0; font-weight: 600; color: var(--muted); }
 .stat { height: 100%; }
-.stat:hover { transform: translateY(-3px); }
 
 /* ---------- Bestzeiten ---------- */
 .sh-pills { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 2px; }
@@ -171,7 +170,6 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
 .pb-tile .pb-where { margin-top: auto; font-size: .9rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: .75rem; }
 .p0 { --pc-soft: var(--p0-soft); }
 .p1 { --pc-soft: var(--green-soft); }
-.pb-tile:hover { transform: translateY(-3px); }
 .tab-pane.fade { transition: opacity .25s linear; }
 
 /* ---------- Rennen ---------- */
@@ -195,6 +193,10 @@ body { -webkit-font-smoothing: antialiased; transition: background-color .3s, co
 .race-times li { display: flex; align-items: center; gap: .5rem; }
 .race-times strong { font-variant-numeric: tabular-nums; }
 .time-missing { font-size: .85rem; font-style: italic; color: var(--muted); }
+.race-status {
+  font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-decoration: none; cursor: help;
+  color: var(--muted); background: rgba(var(--ink-rgb), .07); border-radius: 999px; padding: .1rem .5rem;
+}
 .race-times .race-unofficial { font-size: .8rem; color: var(--muted); }
 .race-bib {
   margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;

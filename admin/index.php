@@ -101,6 +101,7 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
       <aside class="col-lg-3">
         <nav class="admin-nav tile p-2" aria-label="Bereiche">
           <a href="#s-allgemein">Allgemein</a>
+          <a href="#s-texte">Texte</a>
           <a href="#s-next">Nächster Start</a>
           <a href="#s-pbs">Bestzeiten</a>
           <a href="#s-rennen">Rennen</a>
@@ -116,6 +117,12 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
         <section class="tile admin-section" id="s-allgemein">
           <h2>Allgemein</h2>
           <div class="row g-3" data-render="allgemein"></div>
+        </section>
+
+        <section class="tile admin-section" id="s-texte">
+          <h2>Texte</h2>
+          <p class="hint">Die festen Texte der Seite. <code>*Wort*</code> wird hervorgehoben (in der Startkachel grün). Feld leeren = Standardtext.</p>
+          <div class="row g-3" data-render="texte"></div>
         </section>
 
         <section class="tile admin-section" id="s-next">
@@ -135,7 +142,7 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
             <h2 class="m-0">Rennen</h2>
             <button type="button" class="btn btn-green btn-sm rounded-pill px-3" data-act="add-race">+ Rennen</button>
           </div>
-          <p class="hint">Neueste zuerst. Wer nicht mitgelaufen ist: Zeit leer lassen.</p>
+          <p class="hint">Neueste zuerst. Wer nicht dabei war: Haken raus. Dabei, aber nicht gestartet oder nicht ins Ziel gekommen: DNS bzw. DNF wählen. Das Rennen zählt trotzdem als „zusammen“.</p>
           <div data-render="rennen"></div>
         </section>
 
@@ -174,6 +181,7 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
   </div>
 
   <script type="application/json" id="content-data"><?= to_json(load_content()) ?></script>
+  <script type="application/json" id="texte-def"><?= json_encode(array_map(fn ($t) => ['label' => $t[0], 'rows' => $t[3]], TEXTE), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
   <script src="admin.js"></script>
 <?php endif; ?>
 </body>

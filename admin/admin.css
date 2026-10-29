@@ -59,6 +59,8 @@
 /* Pro Person: gelaufen + Zeit */
 .runner-time { display: flex; flex-direction: column; gap: .4rem; padding: .75rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--surface); }
 .runner-time .nr-input { flex: 0 0 7.5rem; }
+.runner-time .status-select { width: auto; flex: none; }
+.runner-time .form-control:disabled { opacity: .45; }
 
 /* Rennen zum Aufklappen */
 .race-edit { border: 1px solid var(--line); border-radius: 1rem; padding: .85rem 1.1rem; margin-bottom: .6rem; background: var(--surface); }

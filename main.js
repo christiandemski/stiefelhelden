@@ -23,7 +23,9 @@
 
   // Wer gelaufen ist (auch ohne bekannte Zeit); ältere Daten ohne Liste: wer eine Zeit hat
   const runnersOf = (r) => people.filter((id) => (r.teilnehmer ? r.teilnehmer.includes(id) : r.zeiten[id]));
+  // zusammen = alle dabei, auch mit DNS (nicht gestartet) oder DNF (nicht ins Ziel gekommen)
   const isTogether = (r) => runnersOf(r).length === people.length;
+  const statusOf = (r, id) => (r.status || {})[id];
   // Startnummer je Person; ältere Daten hatten nur eine pro Rennen
   const bibOf = (r, id) => (r.startnummern ? r.startnummern[id] : runnersOf(r)[0] === id ? r.startnummer : null);
   const races = [...D.rennen].sort((x, y) => y.datum.localeCompare(x.datum));
@@ -39,6 +41,12 @@
     kmTogether: fmtKm(together.reduce((sum, r) => sum + r.km, 0)),
   };
   document.querySelectorAll("[data-fill]").forEach((el) => (el.textContent = fills[el.dataset.fill] ?? ""));
+
+  // ---------- Texte aus dem Backend (sonst bleibt der Text aus index.html); *Wort* = hervorgehoben ----------
+  document.querySelectorAll("[data-text]").forEach((el) => {
+    const t = (D.texte || {})[el.dataset.text];
+    if (t) el.innerHTML = esc(t).replace(/\*([^*]+)\*/g, "<em>$1</em>").replace(/\n/g, "<br>");
+  });
 
   // ---------- Nächster Start ----------
   const n = D.naechsterStart;
@@ -75,7 +83,7 @@
     };
     races.forEach((r) => {
       const d = distOf(r.km);
-      if (d && r.zeiten[id] && !r.inoffiziell) {
+      if (d && r.zeiten[id] && !statusOf(r, id) && !r.inoffiziell) {
         offer(d.label, { distanz: d.label, km: d.km, zeit: r.zeiten[id], rennen: r.name, jahr: Number(r.datum.slice(0, 4)) });
       }
     });
@@ -121,6 +129,7 @@
     return true;
   });
 
+  const STATUS = { dns: "nicht gestartet", dnf: "nicht ins Ziel gekommen" };
   const raceHTML = (r) => `<li class="race row g-2 g-lg-0 align-items-center">
       <span class="col-6 col-lg-2 race-date order-1">${fmtDate(r.datum)}</span>
       <div class="col-12 col-lg-4 order-3 order-lg-2">
@@ -131,7 +140,9 @@
       </div>
       <span class="col-6 col-lg-1 text-end race-km order-2 order-lg-3">${fmtKm(r.km)}<small class="d-lg-none"> km</small></span>
       <ul class="col-12 col-lg-5 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
-        .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} ${r.zeiten[id]
+        .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} ${statusOf(r, id)
+          ? `<abbr class="race-status" title="${STATUS[statusOf(r, id)]}">${statusOf(r, id).toUpperCase()}</abbr>`
+          : r.zeiten[id]
           ? `<strong>${esc(r.zeiten[id])}</strong>`
           : '<span class="time-missing">Zeit folgt</span>'}${bibOf(r, id)
           ? `<span class="race-bib"><span class="visually-hidden">Startnummer </span>#${bibOf(r, id)}</span>` : ""}</li>`)

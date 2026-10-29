@@ -18,6 +18,23 @@ const FOTO_MAX    = 2000;  // längste Kante in px
 const THUMB_MAX   = 640;
 const FOTOS_PER_RACE = 40;
 
+/**
+ * Reine Inhaltstexte der Seite, im Backend unter „Texte“ änderbar.
+ * Schlüssel => [Beschriftung im Backend, Standardtext, max. Zeichen, Zeilen im Eingabefeld]
+ * Die Standardtexte stehen auch in index.html (für den Fall, dass data.js noch keine Texte hat).
+ */
+const TEXTE = [
+    'heroLede'        => ['Startkachel: Satz nach den Namen', 'Zwei Freunde, eine feste Runde – und die sieht auf der Karte aus wie … *Italien*.', 200, 2],
+    'rundeTitel'      => ['Die Runde: Überschrift', 'Auf dem Formular stand: Teamname.', 100, 1],
+    'rundeLead'       => ['Die Runde: Einleitung (groß)', 'Wir hatten keinen. Was wir hatten, war unsere feste Trainingsrunde – oben breit, unten ein Absatz und eine Spitze.', 400, 3],
+    'rundeText1'      => ['Die Runde: Absatz links', 'Auf der Karte sah sie immer gleich aus: Italien. Ein Stiefel. Also hieß sie ab da die Stiefelrunde.', 600, 3],
+    'rundeText2'      => ['Die Runde: Absatz rechts', 'Und wer die regelmäßig läuft, ist ein Stiefelheld. Der Name ist geblieben, die Runde laufen wir immer noch.', 600, 3],
+    'bestzeitenTitel' => ['Bestzeiten: Überschrift', 'Jede:r für sich.', 100, 1],
+    'rennenTitel'     => ['Rennen: Überschrift', 'Gelaufen.', 100, 1],
+    'listeTitel'      => ['Die Liste: Überschrift', 'Da wollen wir noch hin.', 100, 1],
+    'footerTitel'     => ['Fußzeile', 'Bis zur nächsten Runde.', 100, 1],
+];
+
 final class ValidationError extends RuntimeException
 {
     /** @param string[] $errors */
@@ -106,7 +123,10 @@ function ensure_content(): void
 
 function load_content(): array
 {
-    return json_decode((string) file_get_contents(DATA_FILE), true, 64, JSON_THROW_ON_ERROR);
+    $c = json_decode((string) file_get_contents(DATA_FILE), true, 64, JSON_THROW_ON_ERROR);
+    // Stände ohne (alle) Texte bekommen die Standardtexte
+    $c['texte'] = array_merge(array_map(fn ($t) => $t[1], TEXTE), array_intersect_key((array) ($c['texte'] ?? []), TEXTE));
+    return $c;
 }
 
 /** Schreibt erst in eine Temp-Datei und benennt dann um – so ist eine Datei nie halb geschrieben. */
@@ -377,6 +397,18 @@ function validate(array $in, array $current): array
         if ($nrs) {
             $row['startnummern'] = $nrs;
         }
+        // Dabei, aber nicht gestartet (DNS) oder nicht ins Ziel gekommen (DNF): dann ohne Zeit
+        $st = [];
+        foreach ($teil as $id) {
+            $s = ((array) ($r['status'] ?? []))[$id] ?? '';
+            if (in_array($s, ['dns', 'dnf'], true)) {
+                $st[$id] = $s;
+                unset($row['zeiten'][$id]);
+            }
+        }
+        if ($st) {
+            $row['status'] = $st;
+        }
         if (!empty($r['inoffiziell'])) {
             $row['inoffiziell'] = true;  // keine offizielle Zeitnahme: zählt nicht für Bestzeiten
         }
@@ -421,6 +453,12 @@ function validate(array $in, array $current): array
             $err[] = 'Link #' . ($i + 1) . ': Adresse muss mit https:// beginnen.';
         }
         $out['links'][] = ['label' => $str($lnk['label'] ?? '', 'Link #' . ($i + 1) . ': Text', 30, true), 'url' => $url];
+    }
+
+    // Texte: leer heißt Standardtext
+    $out['texte'] = [];
+    foreach (TEXTE as $k => [$label, $default, $max]) {
+        $out['texte'][$k] = $str($in['texte'][$k] ?? '', "Texte: $label", $max) ?: $default;
     }
 
     if ($err) {

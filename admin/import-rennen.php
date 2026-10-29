@@ -197,9 +197,12 @@ foreach ($rows as $i => $r) {
 
     $teil = [];
     $zeiten = [];
+    $status = [];  // „DNS“ / „DNF“ statt einer Zeit
     foreach ($timeCols as $c => $id) {
         $v = $r[$c] ?? '';
-        if ($v !== '' && $v !== 0.0) {
+        if (is_string($v) && preg_match('/^\s*(dns|dnf)\s*$/i', $v, $m)) {
+            $status[$id] = strtolower($m[1]);
+        } elseif ($v !== '' && $v !== 0.0) {
             $zeiten[$id] = to_time($v);
         }
     }
@@ -222,7 +225,7 @@ foreach ($rows as $i => $r) {
             $problems[] = "Zeile $line: „$n“ in Spalte „mit“ ist keine bekannte Person – ignoriert.";
         }
     }
-    $teil = array_values(array_intersect($ids, array_unique(array_merge($teil, array_keys($zeiten), array_keys($nrs)))));
+    $teil = array_values(array_intersect($ids, array_unique(array_merge($teil, array_keys($zeiten), array_keys($nrs), array_keys($status)))));
 
     $bem = clean($r[$col['bemerkung'] ?? ''] ?? '');
     $ort = clean($r[$col['ort'] ?? ''] ?? '');
@@ -230,6 +233,9 @@ foreach ($rows as $i => $r) {
     $run = ['name' => $event, 'ort' => $ort, 'datum' => $datum, 'km' => $km, 'zeiten' => $zeiten, 'teilnehmer' => $teil];
     if ($nrs) {
         $run['startnummern'] = $nrs;
+    }
+    if ($status) {
+        $run['status'] = $status;
     }
     if (preg_match('/keine offizielle zeitnahme/i', $bem)) {
         $run['inoffiziell'] = true;
@@ -285,6 +291,16 @@ foreach ($imported as $run) {
     $r = $content['rennen'][$match];
     $before = json_encode($r);
     $r['zeiten'] = array_merge((array) ($r['zeiten'] ?? []), $run['zeiten']);
+    // Liste gewinnt: Zeit hebt DNS/DNF auf, DNS/DNF ersetzt die Zeit
+    $st = array_diff_key((array) ($r['status'] ?? []), $run['zeiten']);
+    $st = array_merge($st, $run['status'] ?? []);
+    $r['zeiten'] = array_diff_key($r['zeiten'], $st);
+    if ($st != (array) ($r['status'] ?? [])) {
+        unset($r['status']);
+        if ($st) {
+            $r['status'] = $st;
+        }
+    }
     $r['teilnehmer'] = array_values(array_intersect($ids, array_unique(array_merge(
         (array) ($r['teilnehmer'] ?? array_keys(array_filter((array) ($r['zeiten'] ?? [])))),
         $run['teilnehmer']
