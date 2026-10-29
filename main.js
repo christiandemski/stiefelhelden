@@ -123,8 +123,7 @@
       </div>
     </div>`).join(""));
 
-  // ---------- Rennen ----------
-  put("#race-head-who", show.zeiten && show.startnummern ? "Zeiten &amp; Startnummern" : show.zeiten ? "Zeiten" : show.startnummern ? "Dabei &amp; Startnummern" : "Dabei");
+  // ---------- Rennen: Jahre als Kapitel, Rennen mit Fotos oder Notiz als Erlebnis-Kacheln ----------
   const filterEl = put("#filter",
     [["alle", "Alle"], ["zusammen", "Zusammen"], ...people.map((id) => [id, name(id)])]
       .map(([k, label], i) => `<button type="button" class="btn" data-f="${k}" aria-pressed="${i === 0}">${esc(label)}</button>`)
@@ -137,16 +136,40 @@
   });
 
   const STATUS = { dns: "nicht gestartet", dnf: "nicht ins Ziel gekommen" };
+  const badge = (r) => (isTogether(r) ? '<span class="badge-together">Zusammen</span>' : "");
+  const isHighlight = (r) => (r.fotos || []).length > 0 || !!r.notiz;
+
   const raceHTML = (r) => `<li class="race row g-2 g-lg-0 align-items-center">
       <span class="col-6 col-lg-2 race-date order-1">${fmtDate(r.datum)}</span>
       <div class="col-12 col-lg-4 order-3 order-lg-2">
-        <p class="race-name">${esc(r.name)}${isTogether(r) ? '<span class="badge-together">Zusammen</span>' : ""}</p>
+        <p class="race-name">${esc(r.name)}${badge(r)}</p>
         <p class="race-ort">${esc(r.ort)}</p>
-        ${r.notiz ? `<p class="race-note">„${esc(r.notiz)}“</p>` : ""}
-        ${photoStrip(r)}
       </div>
       <span class="col-6 col-lg-1 text-end race-km order-2 order-lg-3">${fmtKm(r.km)}<small class="d-lg-none"> km</small></span>
-      <ul class="col-12 col-lg-5 ps-lg-4 race-times list-unstyled m-0 order-4">${runnersOf(r)
+      ${timesHTML(r, "col-12 col-lg-5 ps-lg-4 order-4")}
+    </li>`;
+
+  const cardHTML = (r) => {
+    const fotos = r.fotos || [];
+    return `<div class="col-md-6 col-xl-4">
+      <article class="hl-card">
+        ${fotos.length ? `<button type="button" class="hl-photo" data-race="${races.indexOf(r)}" data-i="0"
+            aria-label="${fotos.length > 1 ? `Alle ${fotos.length} Fotos ansehen` : "Foto ansehen"}">
+          <img src="uploads/rennen/thumb/${esc(fotos[0].datei)}" alt="" loading="lazy" width="640" height="400">
+          ${fotos.length > 1 ? `<span class="hl-count">${fotos.length} Fotos</span>` : ""}
+        </button>` : ""}
+        <div class="hl-body">
+          <p class="race-date">${fmtDate(r.datum)}${r.ort ? " · " + esc(r.ort) : ""}</p>
+          <p class="race-name">${esc(r.name)}${badge(r)}</p>
+          ${r.notiz ? `<p class="hl-note">„${esc(r.notiz)}“</p>` : ""}
+          <div class="hl-foot"><span class="race-km">${fmtKm(r.km)}<small> km</small></span>${timesHTML(r, "")}</div>
+        </div>
+      </article>
+    </div>`;
+  };
+
+  function timesHTML(r, cls) {
+    return `<ul class="race-times list-unstyled m-0 ${cls}">${runnersOf(r)
         .map((id) => `<li><span class="pdot ${pcls(id)}"></span>${esc(name(id))} ${statusOf(r, id)
           ? show.status ? `<abbr class="race-status" title="${STATUS[statusOf(r, id)]}">${statusOf(r, id).toUpperCase()}</abbr>` : ""
           : !show.zeiten ? ""
@@ -154,29 +177,62 @@
           ? `<strong>${esc(r.zeiten[id])}</strong>`
           : '<span class="time-missing">Zeit folgt</span>'}${show.startnummern && bibOf(r, id)
           ? `<span class="race-bib"><span class="visually-hidden">Startnummer </span>#${bibOf(r, id)}</span>` : ""}</li>`)
-        .join("")}${show.zeiten && r.inoffiziell ? '<li class="race-unofficial">ohne offizielle Zeitnahme</li>' : ""}</ul>
-    </li>`;
-
-  const render = (f) => {
-    const list = pick(f);
-    put("#races", list.length ? list.map(raceHTML).join("") : `<li class="race text-body-secondary">Hier ist noch nichts. Zeit, sich anzumelden.</li>`);
-  };
-
-  // ---------- Fotos: Vorschau-Reihe + Galerie ----------
-  function photoStrip(r) {
-    const fotos = r.fotos || [];
-    if (!fotos.length) return "";
-    const ri = races.indexOf(r), SHOW = 4;
-    return `<div class="race-photos">${fotos.slice(0, SHOW).map((f, j) => {
-      const more = j === SHOW - 1 && fotos.length > SHOW ? fotos.length - SHOW + 1 : 0;
-      return `<button type="button" class="race-photo" data-race="${ri}" data-i="${j}"
-          aria-label="${more ? `Alle ${fotos.length} Fotos ansehen` : `Foto ${j + 1} von ${fotos.length} ansehen`}">
-        <img src="uploads/rennen/thumb/${esc(f.datei)}" alt="" loading="lazy" width="64" height="64">
-        ${more ? `<span class="more">+${more}</span>` : ""}
-      </button>`;
-    }).join("")}</div>`;
+        .join("")}${show.zeiten && r.inoffiziell ? '<li class="race-unofficial">ohne offizielle Zeitnahme</li>' : ""}</ul>`;
   }
 
+  // Aufgeklappte Jahre bleiben beim Filtern offen; am Anfang nur das neueste
+  const openYears = new Set();
+  let filter = "alle";
+  const render = () => {
+    const list = pick(filter);
+    const byYear = new Map();
+    list.forEach((r) => {
+      const y = r.datum.slice(0, 4);
+      byYear.set(y, [...(byYear.get(y) || []), r]);
+    });
+    const years = [...byYear.keys()];  // neueste zuerst, wie races
+    if (!openYears.size && years.length) openYears.add(years[0]);
+
+    // Jahresband: alt -> neu, Balken = Anzahl Rennen
+    const max = Math.max(1, ...[...byYear.values()].map((l) => l.length));
+    put("#year-band", years.length > 1 ? [...years].reverse().map((y) => `<button type="button" class="year-chip" data-year="${y}"
+        aria-pressed="${openYears.has(y)}" aria-label="${y}: ${byYear.get(y).length} Rennen">
+        <span class="year-bar"><span style="height:${Math.round((byYear.get(y).length / max) * 100)}%"></span></span>${y}
+      </button>`).join("") : "");
+
+    put("#races", years.length ? years.map((y) => {
+      const l = byYear.get(y);
+      const km = l.reduce((sum, r) => sum + r.km, 0);
+      const tog = l.filter(isTogether).length;
+      const hl = l.filter(isHighlight), rest = l.filter((r) => !isHighlight(r));
+      return `<details class="tile race-year" id="jahr-${y}" data-year="${y}" ${openYears.has(y) ? "open" : ""}>
+        <summary class="year-head">
+          <span class="year-n">${y}</span>
+          <span class="year-sum">${l.length} Rennen · ${fmtKm(km)} km${filter !== "zusammen" ? ` · ${tog} zusammen` : ""}</span>
+        </summary>
+        ${hl.length ? `<div class="year-hl"><div class="row g-3">${hl.map(cardHTML).join("")}</div></div>` : ""}
+        ${rest.length ? `<ol class="races list-unstyled m-0">${rest.map(raceHTML).join("")}</ol>` : ""}
+      </details>`;
+    }).join("") : `<p class="tile text-body-secondary">Hier ist noch nichts. Zeit, sich anzumelden.</p>`);
+  };
+
+  const racesEl = $("#races"), bandEl = $("#year-band");
+  racesEl.addEventListener("toggle", (e) => {
+    const y = e.target.dataset && e.target.dataset.year;
+    if (!y) return;
+    e.target.open ? openYears.add(y) : openYears.delete(y);
+    const chip = bandEl.querySelector(`[data-year="${y}"]`);
+    if (chip) chip.setAttribute("aria-pressed", e.target.open);
+  }, true);  // toggle steigt nicht auf
+  bandEl.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-year]");
+    if (!b) return;
+    const d = $(`#jahr-${b.dataset.year}`);
+    d.open = true;
+    d.scrollIntoView({ block: "start" });  // weich oder nicht regelt scroll-behavior im CSS
+  });
+
+  // ---------- Galerie ----------
   const gallery = $("#gallery");
   const car = $("#gallery-carousel");
   const updateCount = () => {
@@ -208,17 +264,18 @@
     if (e.key === "ArrowLeft") c.prev();
     if (e.key === "ArrowRight") c.next();
   });
-  $("#races").addEventListener("click", (e) => {
-    const b = e.target.closest(".race-photo");
+  racesEl.addEventListener("click", (e) => {
+    const b = e.target.closest(".hl-photo");
     if (b) openGallery(Number(b.dataset.race), Number(b.dataset.i));
   });
   filterEl.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
     filterEl.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b === btn));
-    render(btn.dataset.f);
+    filter = btn.dataset.f;
+    render();
   });
-  render("alle");
+  render();
 
   // ---------- Wunschliste ----------
   const wishes = [...(D.wunschliste || [])].sort((x, y) => x.erledigt - y.erledigt);

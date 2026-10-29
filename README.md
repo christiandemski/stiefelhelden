@@ -36,6 +36,7 @@ Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Texte, Nächster Start
 - Zeiten als `mm:ss` oder `h:mm:ss`. Wer nicht dabei war: Haken raus. Dabei, aber nicht gestartet bzw. nicht ins Ziel gekommen: DNS bzw. DNF wählen (dann ohne Zeit und nicht für Bestzeiten; das Rennen zählt trotzdem als „zusammen“).
 - Unter „Allgemein → Auf der Seite zeigen“ lassen sich Zeiten, Startnummern, DNS/DNF und der Bereich „Bestzeiten“ ausblenden – wenn es eher um die Erlebnisse als um die Uhr gehen soll. Die Angaben bleiben im Backend erhalten.
 - Unter „Texte“ stehen die festen Texte der Seite (Überschriften, die Geschichte der Runde, Fußzeile). `*Wort*` wird hervorgehoben, ein leeres Feld setzt den Standardtext zurück.
+- Die Rennliste ist nach Jahren gegliedert (neuestes Jahr offen, Jahresband zum Springen). Rennen mit Foto oder Notiz erscheinen als große Erlebnis-Kacheln, die übrigen als kompakte Zeilen.
 - Die Pace und die Kennzahlen oben (Rennen, davon zusammen, km Seite an Seite) rechnet die Seite selbst aus.
 - Der nächste Start blendet sich nach seinem Datum von selbst aus.
 - Die Kürzel der Läufer (`susen`, `christian`) sind fest; die angezeigten Namen sind änderbar.
