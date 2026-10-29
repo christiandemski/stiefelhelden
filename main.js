@@ -29,7 +29,7 @@
   // Startnummer je Person; ältere Daten hatten nur eine pro Rennen
   const bibOf = (r, id) => (r.startnummern ? r.startnummern[id] : runnersOf(r)[0] === id ? r.startnummer : null);
   // Was die Seite zeigt (im Backend unter „Allgemein“); ältere data.js ohne Angabe: alles
-  const show = { zeiten: true, startnummern: true, status: true, bestzeiten: true, ...D.anzeige };
+  const show = { zeiten: true, startnummern: true, status: true, bestzeiten: true, karte: true, ...D.anzeige };
   const races = [...D.rennen].sort((x, y) => y.datum.localeCompare(x.datum));
   const together = races.filter(isTogether);
 
@@ -276,6 +276,142 @@
     render();
   });
   render();
+
+  // ---------- Karte der Laufstädte ----------
+  // Ländergrenzen liegen selbst gehostet in assets/karte/welt.json und werden erst kurz vor der Karte geladen.
+  const orte = D.orte || {};
+  const places = [];
+  races.forEach((r) => {
+    const o = orte[r.ort];
+    if (!o) return;
+    let p = places.find((q) => q.ort === r.ort);
+    if (!p) places.push((p = { ort: r.ort, lat: o.lat, lon: o.lon, races: [] }));
+    p.races.push(r);
+  });
+  const nextPlace = hasNext && orte[n.ort] ? { ort: n.ort, lat: orte[n.ort].lat, lon: orte[n.ort].lon, races: [], next: true } : null;
+
+  if (!show.karte || !places.length) {
+    $("#karte").remove();
+    document.querySelector('#nav a[href="#karte"]').parentElement.remove();
+  } else {
+    const mapEl = $("#map"), panel = $("#map-panel");
+    const pts = nextPlace && !places.some((p) => p.ort === nextPlace.ort) ? [...places, nextPlace] : places;
+    const lats = pts.map((p) => p.lat), lons = pts.map((p) => p.lon);
+    const k = Math.cos(((Math.min(...lats) + Math.max(...lats)) / 2) * Math.PI / 180);  // Länge stauchen wie auf der Karte
+    const proj = (lon, lat) => [lon * k, -lat];
+    let world = null, active = null;
+
+    // Ringe: erster Punkt absolut, dann Differenzen, alles in 1/100 Grad
+    const decode = (flat) => {
+      const out = [];
+      let x = 0, y = 0;
+      for (let i = 0; i < flat.length; i += 2) { x += flat[i]; y += flat[i + 1]; out.push([x / 100, y / 100]); }
+      return out;
+    };
+    const inside = ([x, y], ring) => {
+      let hit = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i], [xj, yj] = ring[j];
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+
+    const placeHTML = (p) => `<div class="map-place">
+        <h3>${esc(p.ort)} <span>${p.next ? "nächster Start" : `${p.races.length} Rennen`}</span></h3>
+        ${p.next ? `<p class="m-0">${esc(n.name)} · ${fmtDate(n.datum)}</p>` : `<ul class="list-unstyled m-0">${p.races.map((r) =>
+          `<li><span class="map-date">${fmtDate(r.datum)}</span><span class="map-name">${esc(r.name)}${badge(r)}</span><span class="map-km">${fmtKm(r.km)} km</span></li>`).join("")}</ul>`}
+      </div>`;
+    const showPanel = (cluster) => {
+      active = cluster ? cluster.key : null;
+      mapEl.querySelectorAll(".map-pin").forEach((b) => b.setAttribute("aria-pressed", b.dataset.key === active));
+      panel.innerHTML = cluster
+        ? cluster.items.map(placeHTML).join("")
+        : `<p class="map-hint">Auf einen Punkt tippen, um die Rennen dort zu sehen.</p>`;
+    };
+
+    const draw = () => {
+      const W = mapEl.clientWidth, H = mapEl.clientHeight;
+      if (!W || !H) return;
+      // Ausschnitt: alle Orte mit Rand, nicht enger als ein paar Grad, auf das Seitenverhältnis der Fläche gebracht
+      const xy = pts.map((p) => proj(p.lon, p.lat));
+      const xs = xy.map((q) => q[0]), ys = xy.map((q) => q[1]);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+      let w = Math.max((Math.max(...xs) - Math.min(...xs)) * 1.3 + 2, 4), h = Math.max((Math.max(...ys) - Math.min(...ys)) * 1.3 + 2, 3);
+      if (w / h < W / H) w = (h * W) / H; else h = (w * H) / W;
+      const vx = cx - w / 2, vy = cy - h / 2;
+
+      const paths = world.map((c) => c.rings
+        .filter((ring) => ring.box[2] >= vx && ring.box[0] <= vx + w && ring.box[3] >= vy && ring.box[1] <= vy + h)
+        .map((ring) => "M" + ring.xy.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join("L") + "Z").join(""))
+        .filter(Boolean);
+
+      // Punkte, die auf dem Bildschirm zu nah beieinander liegen, zu einem zusammenfassen (Ruhrgebiet!)
+      const px = (p) => { const [x, y] = proj(p.lon, p.lat); return [((x - vx) / w) * W, ((y - vy) / h) * H]; };
+      const clusters = [];
+      [...pts].sort((a, b) => b.races.length - a.races.length).forEach((p) => {
+        const [x, y] = px(p);
+        const c = clusters.find((q) => Math.hypot(q.x - x, q.y - y) < 26);
+        if (c) c.items.push(p); else clusters.push({ x, y, items: [p] });
+      });
+      clusters.forEach((c) => {
+        c.key = c.items.map((p) => p.ort).join("|");
+        c.count = c.items.reduce((s, p) => s + p.races.length, 0);
+      });
+
+      mapEl.innerHTML = `<svg viewBox="${vx} ${vy} ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+          ${paths.map((d) => `<path d="${d}"/>`).join("")}
+        </svg>` + clusters.map((c) => {
+          const size = c.count ? Math.min(54, 20 + Math.sqrt(c.count) * 5) : 20;
+          const names = c.items.map((p) => p.ort);
+          const label = names[0] + (names.length > 1 ? ` +${names.length - 1}` : "");
+          return `<button type="button" class="map-pin ${c.count ? "" : "is-next"} ${c.x > W * 0.72 ? "label-left" : ""}" data-key="${esc(c.key)}" aria-pressed="${c.key === active}"
+              style="left:${((c.x / W) * 100).toFixed(2)}%;top:${((c.y / H) * 100).toFixed(2)}%;--s:${size.toFixed(0)}px"
+              aria-label="${esc(names.join(", "))}: ${c.count ? `${c.count} Rennen` : "nächster Start"}">
+            <span class="map-dot">${c.count > 1 ? c.count : ""}</span><span class="map-label">${esc(label)}</span>
+          </button>`;
+        }).join("");
+      mapEl._clusters = clusters;
+      if (active && !clusters.some((c) => c.key === active)) showPanel(null);
+    };
+
+    mapEl.addEventListener("click", (e) => {
+      const b = e.target.closest(".map-pin");
+      if (b) showPanel(b.dataset.key === active ? null : mapEl._clusters.find((c) => c.key === b.dataset.key));
+    });
+
+    const load = () => fetch("assets/karte/welt.json").then((r) => r.json()).then((data) => {
+      world = data.c.map((c) => ({
+        name: c.n,
+        rings: c.r.map((flat) => {
+          const ll = decode(flat), xy = ll.map(([lon, lat]) => proj(lon, lat));
+          const xs = xy.map((q) => q[0]), ys = xy.map((q) => q[1]);
+          return { ll, xy, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] };
+        }),
+      }));
+      // Länder zählen: in welchem Land liegt jeder Ort?
+      const lands = new Set();
+      places.forEach((p) => {
+        const c = world.find((c) => c.rings.some((ring) => inside([p.lon, p.lat], ring.ll)));
+        if (c) lands.add(c.name);
+      });
+      $("#map-sum").textContent = `${places.length} ${places.length === 1 ? "Ort" : "Orte"}` +
+        (lands.size ? ` in ${lands.size} ${lands.size === 1 ? "Land" : "Ländern"}` : "");
+      draw();
+      let t;
+      addEventListener("resize", () => { clearTimeout(t); t = setTimeout(draw, 150); });
+    }).catch(() => { mapEl.innerHTML = `<p class="map-hint">Die Karte konnte nicht geladen werden.</p>`; });
+
+    showPanel(null);
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); load(); }
+      }, { rootMargin: "600px 0px" });
+      io.observe(mapEl);
+    } else {
+      load();
+    }
+  }
 
   // ---------- Wunschliste ----------
   const wishes = [...(D.wunschliste || [])].sort((x, y) => x.erledigt - y.erledigt);

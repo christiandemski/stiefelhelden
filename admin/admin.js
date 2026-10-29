@@ -8,6 +8,9 @@
   const ANZEIGE = JSON.parse($("#anzeige-def").textContent);
   const ids = Object.keys(S.laeufer);
   const open = new WeakSet();   // aufgeklappte Rennen
+  const found = new Map();      // Ort -> Treffer der letzten Suche (nur zur Kontrolle, wird nicht gespeichert)
+  let orteNow = [];             // [Ort, Anzahl Rennen] wie gerade angezeigt
+  S.orte = S.orte && !Array.isArray(S.orte) ? S.orte : {};
   let dirty = false;
 
   const today = () => new Date().toISOString().slice(0, 10);
@@ -177,6 +180,24 @@
       }).join("");
     },
 
+    orte: () => {
+      orteNow = orteList();
+      if (!orteNow.length) return empty("Noch keine Orte – sie kommen aus den Rennen.");
+      return `<div class="table-responsive"><table class="table compact-table align-middle m-0">
+        <thead><tr><th>Ort</th><th class="w-coord">Breite</th><th class="w-coord">Länge</th><th class="w-geo"><span class="visually-hidden">Aktionen</span></th></tr></thead>
+        <tbody>${orteNow.map(([ort, n], i) => {
+          const o = S.orte[ort] || {};
+          return `<tr>
+            <td><span class="fw-bold">${esc(ort)}</span> <span class="text-body-secondary small">${n ? `${n} Rennen` : "nächster Start"}</span>
+              ${found.has(ort) ? `<div class="form-text mt-0">${esc(found.get(ort))}</div>` : ""}</td>
+            <td><input class="form-control form-control-sm" type="number" step="any" inputmode="decimal" data-ort="${i}" data-coord="lat" value="${esc(o.lat)}" placeholder="51.4556" aria-label="Breite ${esc(ort)}"></td>
+            <td><input class="form-control form-control-sm" type="number" step="any" inputmode="decimal" data-ort="${i}" data-coord="lon" value="${esc(o.lon)}" placeholder="7.0116" aria-label="Länge ${esc(ort)}"></td>
+            <td class="text-end"><button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" data-act="geo" data-i="${i}">Suchen</button></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>`;
+    },
+
     liste: () => S.wunschliste.length ? `<div class="table-responsive"><table class="table compact-table align-middle m-0">
         <thead><tr><th class="w-check">Geschafft</th><th class="w-name">Rennen</th><th>Notiz</th><th class="w-tools"><span class="visually-hidden">Aktionen</span></th></tr></thead>
         <tbody>${S.wunschliste.map((w, i) => `<tr>
@@ -196,6 +217,15 @@
         </tr>`).join("")}</tbody>
       </table></div>` : empty("Keine Links."),
   };
+
+  // Alle Orte aus den Rennen (häufigste zuerst), dazu der Ort des nächsten Starts
+  function orteList() {
+    const m = new Map();
+    S.rennen.forEach((r) => { const o = (r.ort || "").trim(); if (o) m.set(o, (m.get(o) || 0) + 1); });
+    const next = ((S.naechsterStart || {}).ort || "").trim();
+    if (next && !m.has(next)) m.set(next, 0);
+    return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"));
+  }
 
   const render = (...names) => {
     (names.length ? names : Object.keys(views)).forEach((n) => {
@@ -223,6 +253,12 @@
   const editor = $("#editor");
   editor.addEventListener("input", (e) => {
     const el = e.target;
+    if (el.dataset.coord) {
+      const ort = orteNow[el.dataset.ort][0];
+      (S.orte[ort] ||= {})[el.dataset.coord] = el.value === "" ? null : Number(el.value);
+      setDirty(true);
+      return;
+    }
     if (!el.dataset.bind) return;
     let v = el.type === "checkbox" ? el.checked : el.value;
     if (el.dataset.kind === "int") v = v === "" ? null : parseInt(v, 10);
@@ -245,6 +281,9 @@
       const t = $(`[data-bind="rennen.${m[1]}.zeiten.${m[3]}"]`);
       if (t) t.disabled = !!v;
     }
+
+    // Orte-Liste folgt den Orten der Rennen
+    if (/^(rennen\.\d+|naechsterStart)\.ort$/.test(el.dataset.bind)) render("orte");
 
     // Kopfzeile eines Rennens live mitziehen
     const d = el.closest(".race-edit");
@@ -297,6 +336,13 @@
 
     if (act === "close-alert") { $("#alerts").innerHTML = ""; return; }
     if (act === "restore") { restore(b.dataset.file); return; }
+    if (act === "geo") { geoSearch([orteNow[b.dataset.i][0]]); return; }
+    if (act === "geo-all") {
+      const missing = orteNow.map(([ort]) => ort).filter((ort) => !S.orte[ort] || S.orte[ort].lat == null || S.orte[ort].lon == null);
+      if (missing.length) geoSearch(missing);
+      else alertBox("success", "Alle Orte haben schon Koordinaten.");
+      return;
+    }
 
     if (act === "add-pb") {
       (S.bestzeiten[b.dataset.id] ||= []).push({ distanz: "", zeit: "", rennen: "", jahr: new Date().getFullYear() });
@@ -412,6 +458,27 @@
     setDirty(true);
     status.textContent = "Fotos hochgeladen – jetzt speichern";
     if (problems.length) alertBox("warning", `<strong>Nicht alle Fotos hat es geklappt:</strong><ul class="mb-0 mt-2">${problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`);
+  };
+
+  // ---------- Orte suchen (OpenStreetMap erlaubt höchstens eine Anfrage pro Sekunde) ----------
+  let searching = false;
+  const geoSearch = async (list) => {
+    if (searching) return;
+    searching = true;
+    const problems = [];
+    for (const [n, ort] of list.entries()) {
+      if (n) await new Promise((ok) => setTimeout(ok, 1100));
+      status.textContent = list.length > 1 ? `Suche Ort ${n + 1} von ${list.length} …` : `Suche „${ort}“ …`;
+      const { ok, data } = await api("geocode", { q: ort.split("/")[0].trim() });
+      if (!ok) { problems.push(`${ort}: ${data.error}`); continue; }
+      S.orte[ort] = { lat: data.lat, lon: data.lon };
+      found.set(ort, data.name);
+      setDirty(true);
+      render("orte");
+    }
+    searching = false;
+    status.textContent = dirty ? "Gefundene Orte prüfen, dann speichern" : status.textContent;
+    if (problems.length) alertBox("warning", `<strong>Nicht alles gefunden:</strong><ul class="mb-0 mt-2">${problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`);
   };
 
   // ---------- Sicherungen ----------

@@ -49,6 +49,18 @@ try {
                 reply(422, ['error' => $e->getMessage()]);
             }
 
+        case 'geocode':
+            $in = json_decode((string) file_get_contents('php://input'), true, 4, JSON_THROW_ON_ERROR);
+            $q = trim((string) ($in['q'] ?? ''));
+            if ($q === '' || mb_strlen($q) > 120) {
+                reply(400, ['error' => 'Bitte einen Ort angeben.']);
+            }
+            try {
+                reply(200, ['ok' => true] + geocode($q));
+            } catch (RuntimeException $e) {
+                reply(422, ['error' => $e->getMessage()]);
+            }
+
         case 'restore':
             $in = json_decode((string) file_get_contents('php://input'), true, 4, JSON_THROW_ON_ERROR);
             $file = (string) ($in['file'] ?? '');

@@ -52,6 +52,8 @@
 .compact-table .w-check { width: 92px; text-align: center; }
 .compact-table .w-name { width: 38%; }
 .compact-table .w-label { width: 28%; }
+.compact-table .w-coord { width: 18%; }
+.compact-table .w-geo { width: 96px; }
 .compact-table .form-check-input { width: 1.25rem; height: 1.25rem; }
 .compact-table .row-tools { justify-content: flex-end; }
 .compact-table .icon-btn { width: 30px; height: 30px; font-size: .85rem; }

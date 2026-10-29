@@ -31,6 +31,7 @@ const TEXTE = [
     'rundeText2'      => ['Die Runde: Absatz rechts', 'Und wer die regelmäßig läuft, ist ein Stiefelheld. Der Name ist geblieben, die Runde laufen wir immer noch.', 600, 3],
     'bestzeitenTitel' => ['Bestzeiten: Überschrift', 'Jede:r für sich.', 100, 1],
     'rennenTitel'     => ['Rennen: Überschrift', 'Gelaufen.', 100, 1],
+    'karteTitel'      => ['Karte: Überschrift', 'Unterwegs.', 100, 1],
     'listeTitel'      => ['Die Liste: Überschrift', 'Da wollen wir noch hin.', 100, 1],
     'footerTitel'     => ['Fußzeile', 'Bis zur nächsten Runde.', 100, 1],
 ];
@@ -41,6 +42,7 @@ const ANZEIGE = [
     'startnummern' => 'Startnummern',
     'status'       => 'DNS / DNF',
     'bestzeiten'   => 'Bereich „Bestzeiten“',
+    'karte'        => 'Bereich „Karte“',
 ];
 
 final class ValidationError extends RuntimeException
@@ -135,6 +137,7 @@ function load_content(): array
     // Stände ohne (alle) Texte bekommen die Standardtexte
     $c['texte'] = array_merge(array_map(fn ($t) => $t[1], TEXTE), array_intersect_key((array) ($c['texte'] ?? []), TEXTE));
     $c['anzeige'] = array_merge(array_map(fn () => true, ANZEIGE), array_intersect_key((array) ($c['anzeige'] ?? []), ANZEIGE));
+    $c['orte'] ??= [];
     return $c;
 }
 
@@ -153,6 +156,7 @@ function to_json(array $c): string
     // leere Zuordnungen als {} statt [] ausgeben, damit die Seite Objekte bekommt
     $c['laeufer'] = (object) $c['laeufer'];
     $c['bestzeiten'] = (object) $c['bestzeiten'];
+    $c['orte'] = (object) ($c['orte'] ?? []);
     foreach ($c['rennen'] as &$r) {
         $r['zeiten'] = (object) $r['zeiten'];
     }
@@ -269,6 +273,37 @@ function cleanup_photos(): void
             @unlink(THUMB_DIR . '/' . $n);
         }
     }
+}
+
+// ---------------------------------------------------------------- Ortssuche
+
+/**
+ * Sucht einen Ort bei OpenStreetMap (Nominatim). Nur aus dem Backend und nur auf Knopfdruck –
+ * Besucher der Seite schicken nichts nach außen.
+ * @return array{lat: float, lon: float, name: string}
+ */
+function geocode(string $q): array
+{
+    $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query(['q' => $q, 'format' => 'jsonv2', 'limit' => 1, 'accept-language' => 'de']);
+    $agent = 'Stiefelhelden-Backend/1.0 (https://www.stiefelhelden.de)';  // verlangt die Nutzungsrichtlinie
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_USERAGENT => $agent]);
+        $body = curl_exec($ch);
+        $ok = $body !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200;
+        curl_close($ch);
+    } else {
+        $body = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10, 'header' => "User-Agent: $agent\r\n"]]));
+        $ok = $body !== false;
+    }
+    if (!$ok) {
+        throw new RuntimeException('Die Ortssuche ist gerade nicht erreichbar. Später noch einmal versuchen.');
+    }
+    $hit = json_decode((string) $body, true)[0] ?? null;
+    if (!is_array($hit)) {
+        throw new RuntimeException("„{$q}“ wurde nicht gefunden.");
+    }
+    return ['lat' => round((float) $hit['lat'], 4), 'lon' => round((float) $hit['lon'], 4), 'name' => (string) ($hit['display_name'] ?? $q)];
 }
 
 // ---------------------------------------------------------------- Prüfen
@@ -442,6 +477,22 @@ function validate(array $in, array $current): array
             $row['fotos'] = $fotos;
         }
         $out['rennen'][] = $row;
+    }
+
+    // Koordinaten je Ort (für die Karte) – nur Orte, die bei Rennen oder beim nächsten Start vorkommen
+    $used = array_flip(array_filter(array_merge(array_column($out['rennen'], 'ort'), [$out['naechsterStart']['ort'] ?? ''])));
+    $out['orte'] = [];
+    foreach ((array) ($in['orte'] ?? []) as $ort => $o) {
+        $lat = is_array($o) ? ($o['lat'] ?? null) : null;
+        $lon = is_array($o) ? ($o['lon'] ?? null) : null;
+        if (!isset($used[$ort]) || ($lat === null || $lat === '') && ($lon === null || $lon === '')) {
+            continue;
+        }
+        if (!is_numeric($lat) || !is_numeric($lon) || abs((float) $lat) > 90 || abs((float) $lon) > 180) {
+            $err[] = "Ort „{$ort}“: Breite (−90 bis 90) und Länge (−180 bis 180) als Zahl angeben.";
+            continue;
+        }
+        $out['orte'][(string) $ort] = ['lat' => round((float) $lat, 4), 'lon' => round((float) $lon, 4)];
     }
 
     // Wunschliste

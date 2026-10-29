@@ -35,6 +35,7 @@
           <li class="nav-item"><a class="nav-link" href="#runde">Die Runde</a></li>
           <li class="nav-item"><a class="nav-link" href="#bestzeiten">Bestzeiten</a></li>
           <li class="nav-item"><a class="nav-link" href="#rennen">Rennen</a></li>
+          <li class="nav-item"><a class="nav-link" href="#karte">Karte</a></li>
           <li class="nav-item"><a class="nav-link" href="#liste">Die Liste</a></li>
         </ul>
       </div>
@@ -120,6 +121,21 @@
       </div>
       <nav class="year-band" id="year-band" aria-label="Jahre"></nav>
       <div class="race-years" id="races"></div>
+    </section>
+
+    <!-- KARTE -->
+    <section class="container section" id="karte">
+      <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+          <p class="eyebrow text-accent">Karte</p>
+          <h2 class="section-title mb-0" data-text="karteTitel">Unterwegs.</h2>
+        </div>
+        <p class="map-sum m-0" id="map-sum"></p>
+      </div>
+      <div class="tile p-0 overflow-hidden">
+        <div class="map" id="map" role="group" aria-label="Karte der Laufstädte"></div>
+        <div class="map-panel" id="map-panel" aria-live="polite"></div>
+      </div>
     </section>
 
     <!-- LISTE -->

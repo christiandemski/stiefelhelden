@@ -105,6 +105,7 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
           <a href="#s-next">Nächster Start</a>
           <a href="#s-pbs">Bestzeiten</a>
           <a href="#s-rennen">Rennen</a>
+          <a href="#s-orte">Orte</a>
           <a href="#s-liste">Die Liste</a>
           <a href="#s-links">Links</a>
           <a href="#s-backups">Sicherungen</a>
@@ -144,6 +145,15 @@ $view = !is_configured() ? 'setup' : (is_logged_in() ? 'editor' : 'login');
           </div>
           <p class="hint">Neueste zuerst. Wer nicht dabei war: Haken raus. Dabei, aber nicht gestartet oder nicht ins Ziel gekommen: DNS bzw. DNF wählen. Das Rennen zählt trotzdem als „zusammen“.</p>
           <div data-render="rennen"></div>
+        </section>
+
+        <section class="tile admin-section" id="s-orte">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="m-0">Orte</h2>
+            <button type="button" class="btn btn-green btn-sm rounded-pill px-3" data-act="geo-all">Fehlende suchen</button>
+          </div>
+          <p class="hint">Für die Karte. Die Orte kommen von selbst aus den Rennen. „Suchen“ holt die Koordinaten bei OpenStreetMap (bei „Essen/Mülheim“ wird nach „Essen“ gesucht). Passt ein Treffer nicht, Koordinaten von Hand eintragen – z.&nbsp;B. aus einer Karten-App per Rechtsklick auf den Ort.</p>
+          <div data-render="orte"></div>
         </section>
 
         <section class="tile admin-section" id="s-liste">

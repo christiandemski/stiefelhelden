@@ -16,6 +16,7 @@ Team-Seite mit kleinem Backend zur Pflege. Kein Build, kein Framework, keine Dat
 | `admin/`                | Das Backend                                                            |
 | `assets/logo.jpg`       | Logo – einfach durch das neue ersetzen (gleicher Name)                 |
 | `assets/vendor/`        | Bootstrap 5.3.3 und Open Sans (lokal statt CDN/Google Fonts)           |
+| `assets/karte/welt.json` | Ländergrenzen für die Karte: Natural Earth 1:50m (gemeinfrei), vereinfacht auf ca. 3 km |
 
 ## Lokal mit DDEV
 
@@ -31,12 +32,13 @@ DDEV läuft mit PHP 8.2 und Apache (wie auf üblichem Webhosting, damit die `.ht
 
 ## Inhalte pflegen
 
-Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Texte, Nächster Start, Bestzeiten, Rennen, Die Liste, Links. „Speichern“ (oder Strg+S) prüft alle Eingaben und veröffentlicht sofort. Vor jedem Speichern wird der alte Stand gesichert; unter „Sicherungen“ lässt sich jeder davon wiederherstellen.
+Im Backend unter `/admin/` anmelden. Bereiche: Allgemein, Texte, Nächster Start, Bestzeiten, Rennen, Orte, Die Liste, Links. „Speichern“ (oder Strg+S) prüft alle Eingaben und veröffentlicht sofort. Vor jedem Speichern wird der alte Stand gesichert; unter „Sicherungen“ lässt sich jeder davon wiederherstellen.
 
 - Zeiten als `mm:ss` oder `h:mm:ss`. Wer nicht dabei war: Haken raus. Dabei, aber nicht gestartet bzw. nicht ins Ziel gekommen: DNS bzw. DNF wählen (dann ohne Zeit und nicht für Bestzeiten; das Rennen zählt trotzdem als „zusammen“).
 - Unter „Allgemein → Auf der Seite zeigen“ lassen sich Zeiten, Startnummern, DNS/DNF und der Bereich „Bestzeiten“ ausblenden – wenn es eher um die Erlebnisse als um die Uhr gehen soll. Die Angaben bleiben im Backend erhalten.
 - Unter „Texte“ stehen die festen Texte der Seite (Überschriften, die Geschichte der Runde, Fußzeile). `*Wort*` wird hervorgehoben, ein leeres Feld setzt den Standardtext zurück.
 - Die Rennliste ist nach Jahren gegliedert (neuestes Jahr offen, Jahresband zum Springen). Rennen mit Foto oder Notiz erscheinen als große Erlebnis-Kacheln, die übrigen als kompakte Zeilen.
+- Karte: Unter „Orte“ stehen alle Orte aus den Rennen. „Suchen“ bzw. „Fehlende suchen“ holt die Koordinaten bei OpenStreetMap (Nominatim) – nur aus dem Backend, Besucher der Seite rufen nichts Externes ab. Falsche Treffer von Hand korrigieren. Die Karte erscheint, sobald mindestens ein Ort Koordinaten hat; nahe beieinander liegende Orte werden zu einem Punkt zusammengefasst.
 - Die Pace und die Kennzahlen oben (Rennen, davon zusammen, km Seite an Seite) rechnet die Seite selbst aus.
 - Der nächste Start blendet sich nach seinem Datum von selbst aus.
 - Die Kürzel der Läufer (`susen`, `christian`) sind fest; die angezeigten Namen sind änderbar.
